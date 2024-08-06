@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"strconv"
+
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
 	"github.com/jmoiron/sqlx"
 )
@@ -39,25 +41,66 @@ func (r *RepoProduct) CreateProduct(data *models.Product) (string, *models.Creat
 	return "Product created successfully.", &product, nil
 }
 
-func (r *RepoProduct) GetAllProducts() (*models.Products, error) {
+func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, maxPrice int, category string, sort string) (*models.Products, error) {
 	query := `
-		SELECT
-			id,
-			product_name,
-			price,
-			category,
-			description,
-			created_at,
-			updated_at,
-			uuid,
-			is_deleted
-		FROM public.product
-		WHERE is_deleted = false
-		ORDER BY created_at DESC;
-	`
-	data := models.Products{}
+        SELECT
+            id,
+            product_name,
+            price,
+            category,
+            description,
+            created_at,
+            updated_at,
+            uuid,
+            is_deleted
+        FROM public.product
+        WHERE is_deleted = false
+    `
+	params := []any{}
+	paramIndex := 1
 
-	if err := r.Select(&data, query); err != nil {
+	// Apply filters
+	if searchProductName != "" {
+		query += ` AND product_name ILIKE $` + strconv.Itoa(paramIndex)
+		params = append(params, "%"+searchProductName+"%")
+		paramIndex++
+	}
+	if minPrice > 0 {
+		query += ` AND price >= $` + strconv.Itoa(paramIndex)
+		params = append(params, minPrice)
+		paramIndex++
+	}
+	if maxPrice > 0 {
+		query += ` AND price <= $` + strconv.Itoa(paramIndex)
+		params = append(params, maxPrice)
+		paramIndex++
+	}
+	if category != "" {
+		query += ` AND category = $` + strconv.Itoa(paramIndex)
+		params = append(params, category)
+		paramIndex++
+	}
+
+	// Sorting logic
+	switch sort {
+	case "a-z":
+		query += ` ORDER BY product_name ASC`
+	case "z-a":
+		query += ` ORDER BY product_name DESC`
+	case "cheapest":
+		query += ` ORDER BY price ASC`
+	case "priciest":
+		query += ` ORDER BY price DESC`
+	case "oldest":
+		query += ` ORDER BY created_at ASC`
+	case "newest":
+		query += ` ORDER BY created_at DESC`
+	default:
+		query += ` ORDER BY created_at DESC`
+	}
+
+	data := models.Products{}
+	if err := r.Select(&data, query, params...); err != nil {
 		return nil, err
 	}
 	return &data, nil

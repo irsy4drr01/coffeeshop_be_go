@@ -35,27 +35,31 @@ func (h *ProductHandlers) PostProductHandler(ctx *gin.Context) {
 
 func (h *ProductHandlers) FetchAllProductsHandler(ctx *gin.Context) {
 	searchProductName := ctx.Query("searchProductName")
-	minPrice := ctx.Query("minPrice")
-	maxPrice := ctx.Query("maxPrice")
+	minPriceStr := ctx.Query("minPrice")
+	maxPriceStr := ctx.Query("maxPrice")
 	category := ctx.Query("category")
 	sort := ctx.Query("sort")
 
-	// Convert minPrice and maxPrice to float64
-	var minPriceFloat, maxPriceFloat float64
-	if minPrice != "" {
-		if mp, err := strconv.ParseFloat(minPrice, 64); err == nil {
-			minPriceFloat = mp
+	// Convert minPrice and maxPrice to int
+	var minPrice, maxPrice int
+	var err error
+
+	if minPriceStr != "" {
+		if minPrice, err = strconv.Atoi(minPriceStr); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid minPrice"})
+			return
 		}
 	}
-	if maxPrice != "" {
-		if mp, err := strconv.ParseFloat(maxPrice, 64); err == nil {
-			maxPriceFloat = mp
+	if maxPriceStr != "" {
+		if maxPrice, err = strconv.Atoi(maxPriceStr); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid maxPrice"})
+			return
 		}
 	}
 
-	data, err := h.GetAllProducts(searchProductName, minPriceFloat, maxPriceFloat, category, sort)
+	data, err := h.GetAllProducts(searchProductName, minPrice, maxPrice, category, sort)
 	if err != nil {
-		ctx.AbortWithError(http.StatusBadRequest, err)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, data)
