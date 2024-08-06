@@ -13,21 +13,29 @@ func NewUser(db *sqlx.DB) *RepoUser {
 	return &RepoUser{db}
 }
 
-func (r *RepoUser) CreateUser(data *models.User) (string, error) {
+func (r *RepoUser) CreateUser(data *models.User) (string, *models.CreateUserResponse, error) {
 	query := `
 		INSERT INTO public.users (		
 			username,
 			email,
 			password
 		)
-		VALUES (:username, :email, :password);
+		VALUES (:username, :email, :password)
+		RETURNING uuid, username, email, password, created_at;
 	`
 
-	_, err := r.NamedExec(query, data)
+	var user models.CreateUserResponse
+	stmt, err := r.DB.PrepareNamed(query)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return "User has been created", nil
+
+	err = stmt.Get(&user, data)
+	stmt.Close() // Menutup statement setelah digunakan
+	if err != nil {
+		return "", nil, err
+	}
+	return "User created successfully.", &user, nil
 }
 
 func (r *RepoUser) GetAllUser() (*models.Users, error) {
@@ -49,4 +57,53 @@ func (r *RepoUser) GetAllUser() (*models.Users, error) {
 		return nil, err
 	}
 	return &data, nil
+}
+
+func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models.UpdateUserResponse, error) {
+	query := `UPDATE users SET `
+	params := map[string]interface{}{}
+
+	if username, exists := body["username"]; exists {
+		query += "username = :username, "
+		params["username"] = username
+	}
+	if emailValue, exists := body["email"]; exists {
+		query += "email = :email, "
+		params["email"] = emailValue
+	}
+	if password, exists := body["password"]; exists {
+		query += "password = :password, "
+		params["password"] = password
+	}
+
+	query += "updated_at = NOW() WHERE uuid = :uuid RETURNING username, email, password, uuid, updated_at"
+	params["uuid"] = uuid
+
+	var user models.UpdateUserResponse
+	stmt, args, err := sqlx.Named(query, params)
+	if err != nil {
+		return "", nil, err
+	}
+
+	stmt = r.Rebind(stmt) // Rebind the statement according to the driver
+	if err := r.QueryRowx(stmt, args...).StructScan(&user); err != nil {
+		return "", nil, err
+	}
+	return "User updated successfully.", &user, nil
+}
+
+func (r *RepoUser) DeleteUser(uuid string) (string, *models.DeleteUserResponse, error) {
+	query := `
+		UPDATE public.users
+		SET
+			is_deleted = true
+		WHERE uuid = $1
+		RETURNING username, email, uuid, is_deleted;
+	`
+
+	var user models.DeleteUserResponse
+	if err := r.Get(&user, query, uuid); err != nil {
+		return "", nil, err
+	}
+	return "User deleted successfully.", &user, nil
 }
