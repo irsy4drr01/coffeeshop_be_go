@@ -41,7 +41,7 @@ func (r *RepoProduct) CreateProduct(data *models.Product) (string, *models.Creat
 	return "Product created successfully.", &product, nil
 }
 
-func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, maxPrice int, category string, sort string) (*models.Products, error) {
+func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, maxPrice int, category string, sort string, page int, limit int) (*models.Products, error) {
 	query := `
         SELECT
             id,
@@ -97,6 +97,13 @@ func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, max
 		query += ` ORDER BY created_at DESC`
 	default:
 		query += ` ORDER BY created_at DESC`
+	}
+
+	// Pagination
+	if limit > 0 {
+		offset := (page - 1) * limit
+		query += ` LIMIT $` + strconv.Itoa(paramIndex) + ` OFFSET $` + strconv.Itoa(paramIndex+1)
+		params = append(params, limit, offset)
 	}
 
 	data := models.Products{}

@@ -40,10 +40,14 @@ func (h *ProductHandlers) FetchAllProductsHandler(ctx *gin.Context) {
 	category := ctx.Query("category")
 	sort := ctx.Query("sort")
 
-	// Convert minPrice and maxPrice to int
-	var minPrice, maxPrice int
+	// Pagination parameters
+	pageStr := ctx.Query("page")
+	limitStr := ctx.Query("limit")
+
+	var minPrice, maxPrice, page, limit int
 	var err error
 
+	// Convert minPrice and maxPrice to int
 	if minPriceStr != "" {
 		if minPrice, err = strconv.Atoi(minPriceStr); err != nil {
 			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid minPrice"})
@@ -57,7 +61,25 @@ func (h *ProductHandlers) FetchAllProductsHandler(ctx *gin.Context) {
 		}
 	}
 
-	data, err := h.GetAllProducts(searchProductName, minPrice, maxPrice, category, sort)
+	// Convert page and limit to int
+	if pageStr == "" {
+		page = 1
+	} else {
+		if page, err = strconv.Atoi(pageStr); err != nil || page < 1 {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+			return
+		}
+	}
+	if limitStr == "" {
+		limit = 10 // Default limit
+	} else {
+		if limit, err = strconv.Atoi(limitStr); err != nil || limit < 1 {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+			return
+		}
+	}
+
+	data, err := h.GetAllProducts(searchProductName, minPrice, maxPrice, category, sort, page, limit)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
