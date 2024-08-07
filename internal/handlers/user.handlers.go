@@ -66,6 +66,27 @@ func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, data)
 }
 
+func (h *UserHandlers) FetchDetailUserHandler(ctx *gin.Context) {
+	uuid := ctx.Param("uuid")
+	if uuid == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "uuid parameter is required"})
+		return
+	}
+
+	userDetail, err := h.GetOneUser(uuid)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if userDetail == nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": userDetail})
+}
+
 func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
 	if uuid == "" {

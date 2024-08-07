@@ -25,6 +25,14 @@ type User struct {
 	IsDeleted bool    `db:"is_deleted" json:"is_deleted"`
 }
 
+type UserDetail struct {
+	Uuid      string `db:"uuid" json:"uuid"`
+	Username  string `db:"username" json:"username"`
+	Email     string `db:"email" json:"email"`
+	Password  string `db:"password" json:"password"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+}
+
 type CreateUserResponse struct {
 	Uuid      string `db:"uuid" json:"uuid"`
 	Username  string `db:"username" json:"username"`

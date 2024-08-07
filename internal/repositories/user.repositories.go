@@ -78,6 +78,25 @@ func (r *RepoUser) GetAllUser(searchUserName string, sort string, page int, limi
 	return &data, nil
 }
 
+func (r *RepoUser) GetOneUser(uuid string) (*models.UserDetail, error) {
+	query := `
+		SELECT
+			uuid,
+			username,
+			email,
+			password,
+			created_at
+		FROM public.users
+		WHERE uuid = $1 AND is_deleted = false;
+	`
+
+	var userDetail models.UserDetail
+	if err := r.Get(&userDetail, query, uuid); err != nil {
+		return nil, err
+	}
+	return &userDetail, nil
+}
+
 func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models.UpdateUserResponse, error) {
 	query := `UPDATE users SET `
 	params := map[string]interface{}{}
