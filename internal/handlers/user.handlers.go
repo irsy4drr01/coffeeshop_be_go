@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
@@ -36,7 +37,28 @@ func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
 	searchUserName := ctx.Query("searchUserName")
 	sortBy := ctx.Query("sort")
 
-	data, err := h.GetAllUser(searchUserName, sortBy)
+	// Ambil parameter pagination
+	pageStr := ctx.Query("page")
+	limitStr := ctx.Query("limit")
+
+	// Parse parameter pagination
+	page := 1
+	limit := 10
+	var err error
+	if pageStr != "" {
+		page, err = strconv.Atoi(pageStr)
+		if err != nil {
+			page = 1
+		}
+	}
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil {
+			limit = 10
+		}
+	}
+
+	data, err := h.GetAllUser(searchUserName, sortBy, page, limit)
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, err)
 		return
