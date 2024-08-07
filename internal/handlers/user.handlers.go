@@ -33,12 +33,15 @@ func (h *UserHandlers) PostUserHandler(ctx *gin.Context) {
 }
 
 func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
-	data, err := h.GetAllUser()
+	searchUserName := ctx.Query("searchUserName")
+	sortBy := ctx.Query("sort")
+
+	data, err := h.GetAllUser(searchUserName, sortBy)
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	ctx.JSON(200, data)
+	ctx.JSON(http.StatusOK, data)
 }
 
 func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {

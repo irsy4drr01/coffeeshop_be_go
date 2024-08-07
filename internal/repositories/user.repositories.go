@@ -38,7 +38,7 @@ func (r *RepoUser) CreateUser(data *models.User) (string, *models.CreateUserResp
 	return "User created successfully.", &user, nil
 }
 
-func (r *RepoUser) GetAllUser() (*models.Users, error) {
+func (r *RepoUser) GetAllUser(searchUserName string, sort string) (*models.Users, error) {
 	query := `
 		SELECT
 			uuid,
@@ -49,11 +49,27 @@ func (r *RepoUser) GetAllUser() (*models.Users, error) {
 			updated_at,
 			is_deleted
 		FROM public.users
-		order by created_at DESC;
-	`
-	data := models.Users{}
+		WHERE username ILIKE '%' || $1 || '%'
+		ORDER BY `
 
-	if err := r.Select(&data, query); err != nil {
+	// Tambahkan logika sort berdasarkan parameter
+	switch sort {
+	case "a-z":
+		query += "username ASC"
+	case "z-a":
+		query += "username DESC"
+	case "oldest":
+		query += "created_at ASC"
+	case "newest":
+		query += "created_at DESC"
+	default:
+		query += "created_at DESC" // default sort
+	}
+
+	query += ";"
+
+	data := models.Users{}
+	if err := r.Select(&data, query, searchUserName); err != nil {
 		return nil, err
 	}
 	return &data, nil
