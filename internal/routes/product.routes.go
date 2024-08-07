@@ -15,6 +15,7 @@ func product(g *gin.Engine, db *sqlx.DB) {
 	handler := handlers.NewProduct(repo)
 
 	route.GET("/", handler.FetchAllProductsHandler)
+	route.GET("/:uuid", handler.FetchDetailProductHandler)
 	route.POST("/", handler.PostProductHandler)
 	route.PATCH("/:uuid", handler.PatchProductHandler)
 	route.DELETE("/:uuid", handler.DeleteProductHandler)

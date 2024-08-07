@@ -113,6 +113,26 @@ func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, max
 	return &data, nil
 }
 
+func (r *RepoProduct) GetOneProduct(uuid string) (*models.ProductDetail, error) {
+	query := `
+		SELECT
+			id,
+			product_name,
+			price,
+			category,
+			description,			
+			uuid
+		FROM public.product
+		WHERE uuid = $1 AND is_deleted = false
+	`
+
+	var product models.ProductDetail
+	if err := r.Get(&product, query, uuid); err != nil {
+		return nil, err
+	}
+	return &product, nil
+}
+
 func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *models.UpdateProductResponse, error) {
 	query := `UPDATE product SET `
 	params := map[string]interface{}{}

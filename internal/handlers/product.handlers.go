@@ -87,6 +87,22 @@ func (h *ProductHandlers) FetchAllProductsHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, data)
 }
 
+func (h *ProductHandlers) FetchDetailProductHandler(ctx *gin.Context) {
+	uuid := ctx.Param("uuid")
+	if uuid == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "uuid parameter is required"})
+		return
+	}
+
+	product, err := h.GetOneProduct(uuid)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": product})
+}
+
 func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
 	if uuid == "" {

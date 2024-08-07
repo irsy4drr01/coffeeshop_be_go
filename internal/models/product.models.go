@@ -12,6 +12,15 @@ type Product struct {
 	IsDeleted   bool    `db:"is_deleted" json:"is_deleted"`
 }
 
+type ProductDetail struct {
+	ID          int     `db:"id" json:"id"`
+	Uuid        string  `db:"uuid" json:"uuid"`
+	ProductName string  `db:"product_name" json:"product_name"`
+	Price       int     `db:"price" json:"price"`
+	Category    string  `db:"category" json:"category"`
+	Description *string `db:"description" json:"description"`
+}
+
 type CreateProductResponse struct {
 	ID          int     `db:"id" json:"id"`
 	Uuid        string  `db:"uuid" json:"uuid"`
