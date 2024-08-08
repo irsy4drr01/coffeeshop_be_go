@@ -34,36 +34,31 @@ func (h *UserHandlers) PostUserHandler(ctx *gin.Context) {
 }
 
 func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
-	searchUserName := ctx.Query("searchUserName")
-	sortBy := ctx.Query("sort")
+	searchUserName := ctx.DefaultQuery("searchUserName", "")
+	sortBy := ctx.DefaultQuery("sort", "")
 
-	// Ambil parameter pagination
-	pageStr := ctx.Query("page")
-	limitStr := ctx.Query("limit")
+	pageStr := ctx.DefaultQuery("page", "1")
+	limitStr := ctx.DefaultQuery("limit", "10")
 
-	// Parse parameter pagination
-	page := 1
-	limit := 10
-	var err error
-	if pageStr != "" {
-		page, err = strconv.Atoi(pageStr)
-		if err != nil {
-			page = 1
-		}
-	}
-	if limitStr != "" {
-		limit, err = strconv.Atoi(limitStr)
-		if err != nil {
-			limit = 10
-		}
-	}
-
-	data, err := h.GetAllUser(searchUserName, sortBy, page, limit)
+	page, err := strconv.Atoi(pageStr)
 	if err != nil {
-		ctx.AbortWithError(http.StatusBadRequest, err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
 		return
 	}
-	ctx.JSON(http.StatusOK, data)
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		return
+	}
+
+	users, err := h.GetAllUser(searchUserName, sortBy, page, limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, users)
 }
 
 func (h *UserHandlers) FetchDetailUserHandler(ctx *gin.Context) {
