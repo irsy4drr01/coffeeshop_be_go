@@ -5,17 +5,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/gin-gonic/gin"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/repositories"
 )
 
 type ProductHandlers struct {
-	*repositories.RepoProduct
+	repo *repositories.RepoProduct
 }
 
 func NewProduct(r *repositories.RepoProduct) *ProductHandlers {
-	return &ProductHandlers{r}
+	return &ProductHandlers{repo: r}
 }
 
 func (h *ProductHandlers) PostProductHandler(ctx *gin.Context) {
@@ -26,7 +27,13 @@ func (h *ProductHandlers) PostProductHandler(ctx *gin.Context) {
 		return
 	}
 
-	response, createProduct, err := h.CreateProduct(&product)
+	_, err := govalidator.ValidateStruct(product)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	response, createProduct, err := h.repo.CreateProduct(&product)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -72,7 +79,7 @@ func (h *ProductHandlers) FetchAllProductsHandler(ctx *gin.Context) {
 		return
 	}
 
-	data, err := h.GetAllProducts(searchProductName, minPrice, maxPrice, category, sort, page, limit)
+	data, err := h.repo.GetAllProducts(searchProductName, minPrice, maxPrice, category, sort, page, limit)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -87,7 +94,7 @@ func (h *ProductHandlers) FetchDetailProductHandler(ctx *gin.Context) {
 		return
 	}
 
-	product, err := h.GetOneProduct(uuid)
+	product, err := h.repo.GetOneProduct(uuid)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
@@ -109,7 +116,20 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		return
 	}
 
-	message, updatedProduct, err := h.UpdateProduct(uuid, body)
+	// Validate only required fields for update
+	product := models.Product{
+		ProductName: body["product_name"].(string),
+		Price:       body["price"].(int),
+		Category:    body["category"].(string),
+		Description: body["description"].(*string),
+	}
+	_, err := govalidator.ValidateStruct(product)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	message, updatedProduct, err := h.repo.UpdateProduct(uuid, body)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -125,7 +145,7 @@ func (h *ProductHandlers) DeleteProductHandler(ctx *gin.Context) {
 		return
 	}
 
-	message, deletedProduct, err := h.DeleteProduct(uuid)
+	message, deletedProduct, err := h.repo.DeleteProduct(uuid)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
