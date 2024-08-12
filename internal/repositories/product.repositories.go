@@ -83,9 +83,9 @@ func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, max
 
 	// Sorting logic
 	switch sort {
-	case "a-z":
+	case "ASC":
 		query += ` ORDER BY product_name ASC`
-	case "z-a":
+	case "DESC":
 		query += ` ORDER BY product_name DESC`
 	case "cheapest":
 		query += ` ORDER BY price ASC`

@@ -62,9 +62,9 @@ func (r *RepoUser) GetAllUser(searchUserName string, sort string, page int, limi
 
 	// Tambahkan logika sort berdasarkan parameter
 	switch sort {
-	case "a-z":
+	case "ASC":
 		query += "username ASC"
-	case "z-a":
+	case "DESC":
 		query += "username DESC"
 	case "oldest":
 		query += "created_at ASC"
