@@ -1,16 +1,20 @@
 package models
 
-// type Product struct {
-// 	ID          int     `db:"id" json:"id,omitempty"`
-// 	Uuid        string  `db:"uuid" json:"uuid,omitempty"`
-// 	ProductName string  `db:"product_name" json:"product_name,omitempty"`
-// 	Price       int     `db:"price" json:"price,omitempty"`
-// 	Category    string  `db:"category" json:"category,omitempty"`
-// 	Description *string `db:"description,omitempty" json:"description,omitempty"`
-// 	CreatedAt   string  `db:"created_at,omitempty" json:"created_at,omitempty"`
-// 	UpdatedAt   *string `db:"updated_at,omitempty" json:"updated_at,omitempty"`
-// 	IsDeleted   bool    `db:"is_deleted,omitempty" json:"is_deleted,omitempty"`
-// }
+var schemaProducts = `CREATE TABLE public.product (
+	id serial4 NOT NULL,
+	product_name varchar(255) NOT NULL,
+	price int4 NOT NULL,
+	category varchar(255) NOT NULL,
+	description text NULL,
+	created_at timestamptz DEFAULT now() NULL,
+	updated_at timestamptz NULL,
+	"uuid" uuid DEFAULT gen_random_uuid() NULL,
+	is_deleted bool DEFAULT false NULL,
+	CONSTRAINT product_name_unique UNIQUE (product_name),
+	CONSTRAINT product_pk PRIMARY KEY (id)
+);`
+
+var _ = schemaProducts
 
 type Product struct {
 	ID          int     `db:"id" json:"id,omitempty" valid:"-"`

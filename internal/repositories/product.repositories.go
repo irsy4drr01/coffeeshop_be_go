@@ -7,11 +7,19 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type ProductRepoInterface interface {
+	CreateProduct(data *models.Product) (string, *models.Product, error)
+	GetAllProducts(searchProductName string, minPrice int, maxPrice int, category string, sort string, page int, limit int) (*models.Products, error)
+	GetOneProduct(uuid string) (*models.Product, error)
+	UpdateProduct(uuid string, body map[string]any) (string, *models.Product, error)
+	DeleteProduct(uuid string) (string, *models.Product, error)
+}
+
 type RepoProduct struct {
 	*sqlx.DB
 }
 
-func NewProduct(db *sqlx.DB) *RepoProduct {
+func NewProduct(db *sqlx.DB) ProductRepoInterface {
 	return &RepoProduct{db}
 }
 

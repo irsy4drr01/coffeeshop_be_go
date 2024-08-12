@@ -103,14 +103,14 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	}
 
 	user := models.User{}
-	if username, ok := body["username"].(string); ok {
-		user.Username = username
+	if username, exists := body["username"]; exists {
+		user.Username = username.(string)
 	}
-	if email, ok := body["email"].(string); ok {
-		user.Email = email
+	if email, exists := body["email"]; exists {
+		user.Email = email.(string)
 	}
-	if password, ok := body["password"].(string); ok {
-		user.Password = password
+	if password, exists := body["password"]; exists {
+		user.Password = password.(string)
 	}
 
 	_, err := govalidator.ValidateStruct(user)

@@ -12,11 +12,11 @@ import (
 )
 
 type ProductHandlers struct {
-	repo *repositories.RepoProduct
+	repo repositories.ProductRepoInterface
 }
 
-func NewProduct(r *repositories.RepoProduct) *ProductHandlers {
-	return &ProductHandlers{repo: r}
+func NewProduct(repo repositories.ProductRepoInterface) *ProductHandlers {
+	return &ProductHandlers{repo: repo}
 }
 
 func (h *ProductHandlers) PostProductHandler(ctx *gin.Context) {
