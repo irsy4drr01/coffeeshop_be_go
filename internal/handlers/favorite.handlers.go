@@ -10,11 +10,11 @@ import (
 )
 
 type FavoriteHandlers struct {
-	*repositories.RepoFavorite
+	repo repositories.FavoriteRepoInterface
 }
 
-func NewFavorite(r *repositories.RepoFavorite) *FavoriteHandlers {
-	return &FavoriteHandlers{r}
+func NewFavorite(repo repositories.FavoriteRepoInterface) *FavoriteHandlers {
+	return &FavoriteHandlers{repo: repo}
 }
 
 func (h *FavoriteHandlers) AddFavoriteHandler(ctx *gin.Context) {
@@ -24,7 +24,7 @@ func (h *FavoriteHandlers) AddFavoriteHandler(ctx *gin.Context) {
 		return
 	}
 
-	message, favorite, err := h.AddFavorite(req.UserID, req.ProductID)
+	message, favorite, err := h.repo.AddFavorite(req.UserID, req.ProductID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,7 +45,7 @@ func (h *FavoriteHandlers) RemoveFavoriteHandler(ctx *gin.Context) {
 		return
 	}
 
-	message, err := h.RemoveFavorite(userID, productID)
+	message, err := h.repo.RemoveFavorite(userID, productID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -61,7 +61,7 @@ func (h *FavoriteHandlers) GetFavoritesHandler(ctx *gin.Context) {
 		return
 	}
 
-	favorites, err := h.GetFavorites(userID)
+	favorites, err := h.repo.GetFavorites(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

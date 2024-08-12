@@ -5,11 +5,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type FavoriteRepoInterface interface {
+	AddFavorite(userID, productID int) (string, *models.Favorite, error)
+	RemoveFavorite(userID, productID int) (string, error)
+	GetFavorites(userID int) (*models.Favorites, error)
+}
+
 type RepoFavorite struct {
 	*sqlx.DB
 }
 
-func NewFavorite(db *sqlx.DB) *RepoFavorite {
+func NewFavorite(db *sqlx.DB) FavoriteRepoInterface {
 	return &RepoFavorite{db}
 }
 
