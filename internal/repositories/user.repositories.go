@@ -5,11 +5,19 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type UserRepoInterface interface {
+	CreateUser(data *models.User) (string, *models.User, error)
+	GetAllUser(searchUserName string, sort string, page int, limit int) (*models.Users, error)
+	GetOneUser(uuid string) (*models.User, error)
+	UpdateUser(uuid string, body map[string]any) (string, *models.User, error)
+	DeleteUser(uuid string) (string, *models.User, error)
+}
+
 type RepoUser struct {
 	*sqlx.DB
 }
 
-func NewUser(db *sqlx.DB) *RepoUser {
+func NewUser(db *sqlx.DB) UserRepoInterface {
 	return &RepoUser{db}
 }
 
@@ -39,7 +47,6 @@ func (r *RepoUser) CreateUser(data *models.User) (string, *models.User, error) {
 }
 
 func (r *RepoUser) GetAllUser(searchUserName string, sort string, page int, limit int) (*models.Users, error) {
-
 	query := `
 		SELECT
 			uuid,
