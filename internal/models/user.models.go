@@ -17,9 +17,9 @@ var _ = schemaUsers
 
 type User struct {
 	Uuid      string  `db:"uuid" json:"uuid" valid:"uuid~Uuid must be a valid UUID format"`
-	Username  string  `db:"username" json:"username" valid:"required~Username is required,stringlength(5|100)~Username length must be between 5 and 100 characters"`
-	Email     string  `db:"email" json:"email" valid:"required~Email is required,email~Invalid email format"`
-	Password  string  `db:"password,omitempty" json:"password,omitempty" valid:"required~Password is required,stringlength(8|100)~Password length must be between 8 and 100 characters"`
+	Username  string  `db:"username" json:"username" valid:"stringlength(5|100)~Username length must be between 5 and 100 characters"`
+	Email     string  `db:"email" json:"email" valid:"email~Invalid email format"`
+	Password  string  `db:"password,omitempty" json:"password,omitempty" valid:"stringlength(8|100)~Password length must be between 8 and 100 characters"`
 	CreatedAt string  `db:"created_at,omitempty" json:"created_at,omitempty" valid:"-"`
 	UpdatedAt *string `db:"updated_at,omitempty" json:"updated_at,omitempty" valid:"-"`
 	IsDeleted bool    `db:"is_deleted,omitempty" json:"is_deleted,omitempty" valid:"-"`

@@ -116,15 +116,24 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Validate only required fields for update
-	product := models.Product{
-		ProductName: body["product_name"].(string),
-		Price:       body["price"].(int),
-		Category:    body["category"].(string),
-		Description: body["description"].(*string),
+	// Validate only required fields that are present in the body
+	product := models.Product{}
+	if name, exists := body["product_name"]; exists {
+		product.ProductName = name.(string)
 	}
-	_, err := govalidator.ValidateStruct(product)
-	if err != nil {
+	if price, exists := body["price"]; exists {
+		product.Price = price.(int)
+	}
+	if category, exists := body["category"]; exists {
+		product.Category = category.(string)
+	}
+	if description, exists := body["description"]; exists {
+		desc := description.(string)
+		product.Description = &desc
+	}
+
+	// Validate the fields present in the body
+	if _, err := govalidator.ValidateStruct(product); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
