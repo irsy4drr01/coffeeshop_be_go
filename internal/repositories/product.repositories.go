@@ -15,7 +15,7 @@ func NewProduct(db *sqlx.DB) *RepoProduct {
 	return &RepoProduct{db}
 }
 
-func (r *RepoProduct) CreateProduct(data *models.Product) (string, *models.CreateProductResponse, error) {
+func (r *RepoProduct) CreateProduct(data *models.Product) (string, *models.Product, error) {
 	query := `
 		INSERT INTO public.product (
 			product_name,
@@ -27,7 +27,7 @@ func (r *RepoProduct) CreateProduct(data *models.Product) (string, *models.Creat
 		RETURNING id, product_name, price, category, description, created_at, uuid;
 	`
 
-	var product models.CreateProductResponse
+	var product models.Product
 	stmt, err := r.DB.PrepareNamed(query)
 	if err != nil {
 		return "", nil, err
@@ -113,7 +113,7 @@ func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, max
 	return &data, nil
 }
 
-func (r *RepoProduct) GetOneProduct(uuid string) (*models.ProductDetail, error) {
+func (r *RepoProduct) GetOneProduct(uuid string) (*models.Product, error) {
 	query := `
 		SELECT
 			id,
@@ -126,14 +126,14 @@ func (r *RepoProduct) GetOneProduct(uuid string) (*models.ProductDetail, error) 
 		WHERE uuid = $1 AND is_deleted = false
 	`
 
-	var product models.ProductDetail
+	var product models.Product
 	if err := r.Get(&product, query, uuid); err != nil {
 		return nil, err
 	}
 	return &product, nil
 }
 
-func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *models.UpdateProductResponse, error) {
+func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *models.Product, error) {
 	query := `UPDATE product SET `
 	params := map[string]interface{}{}
 
@@ -157,7 +157,7 @@ func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *
 	query += "updated_at = NOW() WHERE uuid = :uuid RETURNING id, product_name, price, category, description, updated_at, uuid"
 	params["uuid"] = uuid
 
-	var product models.UpdateProductResponse
+	var product models.Product
 	stmt, args, err := sqlx.Named(query, params)
 	if err != nil {
 		return "", nil, err
@@ -170,7 +170,7 @@ func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *
 	return "Product updated successfully.", &product, nil
 }
 
-func (r *RepoProduct) DeleteProduct(uuid string) (string, *models.DeleteProductResponse, error) {
+func (r *RepoProduct) DeleteProduct(uuid string) (string, *models.Product, error) {
 	query := `
 		UPDATE public.product
 		SET
@@ -179,7 +179,7 @@ func (r *RepoProduct) DeleteProduct(uuid string) (string, *models.DeleteProductR
 		RETURNING id, product_name, is_deleted;
 	`
 
-	var product models.DeleteProductResponse
+	var product models.Product
 	if err := r.Get(&product, query, uuid); err != nil {
 		return "", nil, err
 	}

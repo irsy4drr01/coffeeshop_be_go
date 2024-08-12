@@ -13,7 +13,7 @@ func NewUser(db *sqlx.DB) *RepoUser {
 	return &RepoUser{db}
 }
 
-func (r *RepoUser) CreateUser(data *models.User) (string, *models.CreateUserResponse, error) {
+func (r *RepoUser) CreateUser(data *models.User) (string, *models.User, error) {
 	query := `
 		INSERT INTO public.users (		
 			username,
@@ -24,7 +24,7 @@ func (r *RepoUser) CreateUser(data *models.User) (string, *models.CreateUserResp
 		RETURNING uuid, username, email, password, created_at;
 	`
 
-	var user models.CreateUserResponse
+	var user models.User
 	stmt, err := r.DB.PrepareNamed(query)
 	if err != nil {
 		return "", nil, err
@@ -78,7 +78,7 @@ func (r *RepoUser) GetAllUser(searchUserName string, sort string, page int, limi
 	return &data, nil
 }
 
-func (r *RepoUser) GetOneUser(uuid string) (*models.UserDetail, error) {
+func (r *RepoUser) GetOneUser(uuid string) (*models.User, error) {
 	query := `
 		SELECT
 			uuid,
@@ -90,14 +90,14 @@ func (r *RepoUser) GetOneUser(uuid string) (*models.UserDetail, error) {
 		WHERE uuid = $1 AND is_deleted = false;
 	`
 
-	var userDetail models.UserDetail
+	var userDetail models.User
 	if err := r.Get(&userDetail, query, uuid); err != nil {
 		return nil, err
 	}
 	return &userDetail, nil
 }
 
-func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models.UpdateUserResponse, error) {
+func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models.User, error) {
 	query := `UPDATE users SET `
 	params := map[string]interface{}{}
 
@@ -117,7 +117,7 @@ func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models
 	query += "updated_at = NOW() WHERE uuid = :uuid RETURNING username, email, password, uuid, updated_at"
 	params["uuid"] = uuid
 
-	var user models.UpdateUserResponse
+	var user models.User
 	stmt, args, err := sqlx.Named(query, params)
 	if err != nil {
 		return "", nil, err
@@ -130,7 +130,7 @@ func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models
 	return "User updated successfully.", &user, nil
 }
 
-func (r *RepoUser) DeleteUser(uuid string) (string, *models.DeleteUserResponse, error) {
+func (r *RepoUser) DeleteUser(uuid string) (string, *models.User, error) {
 	query := `
 		UPDATE public.users
 		SET
@@ -139,7 +139,7 @@ func (r *RepoUser) DeleteUser(uuid string) (string, *models.DeleteUserResponse, 
 		RETURNING username, email, uuid, is_deleted;
 	`
 
-	var user models.DeleteUserResponse
+	var user models.User
 	if err := r.Get(&user, query, uuid); err != nil {
 		return "", nil, err
 	}

@@ -13,7 +13,7 @@ func NewFavorite(db *sqlx.DB) *RepoFavorite {
 	return &RepoFavorite{db}
 }
 
-func (r *RepoFavorite) AddFavorite(userID, productID int) (string, *models.FavoriteResponse, error) {
+func (r *RepoFavorite) AddFavorite(userID, productID int) (string, *models.Favorite, error) {
 	insertQuery := `
         INSERT INTO public.favorite (
             user_id,
@@ -40,7 +40,7 @@ func (r *RepoFavorite) AddFavorite(userID, productID int) (string, *models.Favor
         WHERE f.user_id = $1 AND f.product_id = $2;
     `
 
-	var favorite models.FavoriteResponse
+	var favorite models.Favorite
 	if err := r.Get(&favorite, selectQuery, userID, productID); err != nil {
 		return "", nil, err
 	}

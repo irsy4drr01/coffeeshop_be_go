@@ -19,41 +19,10 @@ type User struct {
 	Uuid      string  `db:"uuid" json:"uuid"`
 	Username  string  `db:"username" json:"username"`
 	Email     string  `db:"email" json:"email"`
-	Password  string  `db:"password" json:"password"`
-	CreatedAt string  `db:"created_at" json:"created_at"`
-	UpdatedAt *string `db:"updated_at" json:"updated_at"`
-	IsDeleted bool    `db:"is_deleted" json:"is_deleted"`
-}
-
-type UserDetail struct {
-	Uuid      string `db:"uuid" json:"uuid"`
-	Username  string `db:"username" json:"username"`
-	Email     string `db:"email" json:"email"`
-	Password  string `db:"password" json:"password"`
-	CreatedAt string `db:"created_at" json:"created_at"`
-}
-
-type CreateUserResponse struct {
-	Uuid      string `db:"uuid" json:"uuid"`
-	Username  string `db:"username" json:"username"`
-	Email     string `db:"email" json:"email"`
-	Password  string `db:"password" json:"password"`
-	CreatedAt string `db:"created_at" json:"created_at"`
-}
-
-type UpdateUserResponse struct {
-	Uuid      string  `db:"uuid" json:"uuid"`
-	Username  string  `db:"username" json:"username"`
-	Email     string  `db:"email" json:"email"`
-	Password  string  `db:"password" json:"password"`
-	UpdatedAt *string `db:"updated_at" json:"updated_at"`
-}
-
-type DeleteUserResponse struct {
-	Uuid      string `db:"uuid" json:"uuid"`
-	Username  string `db:"username" json:"username"`
-	Email     string `db:"email" json:"email"`
-	IsDeleted bool   `db:"is_deleted" json:"is_deleted"`
+	Password  string  `db:"password,omitempty" json:"password,omitempty"`
+	CreatedAt string  `db:"created_at,omitempty" json:"created_at,omitempty"`
+	UpdatedAt *string `db:"updated_at,omitempty" json:"updated_at,omitempty"`
+	IsDeleted bool    `db:"is_deleted,omitempty" json:"is_deleted,omitempty"`
 }
 
 type Users []User
