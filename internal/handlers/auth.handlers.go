@@ -45,3 +45,32 @@ func (h *AuthHandlers) Register(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, gin.H{"response": response, "data": createUser})
 }
+
+func (h *AuthHandlers) Login(ctx *gin.Context) {
+	body := models.User{}
+
+	if err := ctx.ShouldBind(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "message": err.Error()})
+		return
+	}
+
+	_, err := govalidator.ValidateStruct(&body)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "message": err.Error()})
+		return
+	}
+
+	result, err := h.repo.GetByEmail(body.Email)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "message": err.Error()})
+		return
+	}
+
+	err = pkg.VerifyPassword(result.Password, body.Password)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "wrong password", "message": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{"message": "login success", "data": result})
+}

@@ -15,4 +15,5 @@ func auth(g *gin.Engine, db *sqlx.DB) {
 	handler := handlers.NewAuth(repo)
 
 	route.POST("/register", handler.Register)
+	route.POST("/login", handler.Login)
 }
