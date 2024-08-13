@@ -72,5 +72,12 @@ func (h *AuthHandlers) Login(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "login success", "data": result})
+	jwt := pkg.NewJWT(result.Uuid, result.Email)
+	token, err := jwt.GenerateToken()
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "failed generate token", "message": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{"message": "login success", "data": result, "token": token})
 }
