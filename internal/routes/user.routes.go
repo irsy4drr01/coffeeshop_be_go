@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/handlers"
+	middleware "github.com/irsy4drr01/coffeeshop_be_go/internal/middlewares"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/repositories"
 	"github.com/jmoiron/sqlx"
 )
@@ -15,7 +16,7 @@ func user(g *gin.Engine, db *sqlx.DB) {
 	handler := handlers.NewUser(repo)
 
 	route.GET("/", handler.FetchAllUserHandler)
-	route.GET("/:uuid", handler.FetchDetailUserHandler)
-	route.PATCH("/:uuid", handler.PatchUserHandler)
-	route.DELETE("/:uuid", handler.DeleteUserHandler)
+	route.GET("/:uuid", middleware.AuthJwtMiddleware(), handler.FetchDetailUserHandler)
+	route.PATCH("/:uuid", middleware.AuthJwtMiddleware(), handler.PatchUserHandler)
+	route.DELETE("/:uuid", middleware.AuthJwtMiddleware(), handler.DeleteUserHandler)
 }
