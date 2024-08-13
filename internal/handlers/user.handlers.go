@@ -18,28 +18,6 @@ func NewUser(repo repositories.UserRepoInterface) *UserHandlers {
 	return &UserHandlers{repo: repo}
 }
 
-func (h *UserHandlers) PostUserHandler(ctx *gin.Context) {
-	user := models.User{}
-
-	if err := ctx.ShouldBind(&user); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
-		return
-	}
-
-	_, err := govalidator.ValidateStruct(user)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	response, createUser, err := h.repo.CreateUser(&user)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"response": response, "data": createUser})
-}
-
 func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
 	searchUserName := ctx.DefaultQuery("searchUserName", "")
 	sortBy := ctx.DefaultQuery("sort", "")

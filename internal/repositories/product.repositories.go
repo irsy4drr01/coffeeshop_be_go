@@ -19,7 +19,7 @@ type RepoProduct struct {
 	*sqlx.DB
 }
 
-func NewProduct(db *sqlx.DB) ProductRepoInterface {
+func NewProduct(db *sqlx.DB) *RepoProduct {
 	return &RepoProduct{db}
 }
 

@@ -6,7 +6,6 @@ import (
 )
 
 type UserRepoInterface interface {
-	CreateUser(data *models.User) (string, *models.User, error)
 	GetAllUser(searchUserName string, sort string, page int, limit int) (*models.Users, error)
 	GetOneUser(uuid string) (*models.User, error)
 	UpdateUser(uuid string, body map[string]any) (string, *models.User, error)
@@ -17,33 +16,8 @@ type RepoUser struct {
 	*sqlx.DB
 }
 
-func NewUser(db *sqlx.DB) UserRepoInterface {
+func NewUser(db *sqlx.DB) *RepoUser {
 	return &RepoUser{db}
-}
-
-func (r *RepoUser) CreateUser(data *models.User) (string, *models.User, error) {
-	query := `
-		INSERT INTO public.users (		
-			username,
-			email,
-			password
-		)
-		VALUES (:username, :email, :password)
-		RETURNING uuid, username, email, password, created_at;
-	`
-
-	var user models.User
-	stmt, err := r.DB.PrepareNamed(query)
-	if err != nil {
-		return "", nil, err
-	}
-
-	err = stmt.Get(&user, data)
-	stmt.Close() // Menutup statement setelah digunakan
-	if err != nil {
-		return "", nil, err
-	}
-	return "User created successfully.", &user, nil
 }
 
 func (r *RepoUser) GetAllUser(searchUserName string, sort string, page int, limit int) (*models.Users, error) {

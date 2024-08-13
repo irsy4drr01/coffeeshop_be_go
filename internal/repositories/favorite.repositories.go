@@ -15,7 +15,7 @@ type RepoFavorite struct {
 	*sqlx.DB
 }
 
-func NewFavorite(db *sqlx.DB) FavoriteRepoInterface {
+func NewFavorite(db *sqlx.DB) *RepoFavorite {
 	return &RepoFavorite{db}
 }
 
