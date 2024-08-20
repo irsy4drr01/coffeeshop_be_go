@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"net/http"
 	"strconv"
 
@@ -8,14 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/repositories"
+	"github.com/irsy4drr01/coffeeshop_be_go/pkg"
 )
 
 type UserHandlers struct {
 	repo repositories.UserRepoInterface
+	cld  pkg.CloudinaryInterface
 }
 
-func NewUser(repo repositories.UserRepoInterface) *UserHandlers {
-	return &UserHandlers{repo: repo}
+func NewUser(repo repositories.UserRepoInterface, cld pkg.CloudinaryInterface) *UserHandlers {
+	return &UserHandlers{repo: repo, cld: cld}
 }
 
 func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
@@ -67,6 +72,14 @@ func (h *UserHandlers) FetchDetailUserHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": userDetail})
 }
 
+func randomInt(max int) (int, error) {
+	nBig, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		return 0, err
+	}
+	return int(nBig.Int64()), nil
+}
+
 func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
@@ -74,25 +87,60 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		return
 	}
 
-	var body map[string]any
-	if err := ctx.ShouldBindJSON(&body); err != nil {
+	// Ambil file gambar jika ada
+	file, header, err := ctx.Request.FormFile("image")
+	if err != nil && err != http.ErrMissingFile {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+		return
+	}
+
+	// Inisialisasi map body
+	body := map[string]interface{}{}
+
+	// Bind input dari form-data
+	if err := ctx.ShouldBind(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
 
-	user := models.User{}
-	if username, exists := body["username"]; exists {
-		user.Username = username.(string)
-	}
-	if email, exists := body["email"]; exists {
-		user.Email = email.(string)
-	}
-	if password, exists := body["password"]; exists {
-		user.Password = password.(string)
+	// Validasi file jika ada
+	if file != nil {
+		mimeType := header.Header.Get("Content-Type")
+		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Upload failed: wrong file type"})
+			return
+		}
+
+		// Upload file ke Cloudinary
+		randomNumber, err := randomInt(1000)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random number: " + err.Error()})
+			return
+		}
+		fileName := fmt.Sprintf("user-image-%d", randomNumber)
+		uploadResult, err := h.cld.UploadFile(ctx, file, fileName)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+			return
+		}
+
+		// Set URL gambar di body
+		body["image"] = uploadResult.SecureURL
 	}
 
-	_, err := govalidator.ValidateStruct(user)
-	if err != nil {
+	user := models.User{}
+	if username, exists := body["username"].(string); exists && username != "" {
+		user.Username = username
+	}
+	if email, exists := body["email"].(string); exists && email != "" {
+		user.Email = email
+	}
+	if password, exists := body["password"].(string); exists && password != "" {
+		user.Password = password
+	}
+
+	// Validasi User
+	if _, err := govalidator.ValidateStruct(user); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

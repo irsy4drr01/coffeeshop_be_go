@@ -27,6 +27,7 @@ func (r *RepoUser) GetAllUser(searchUserName string, sort string, page int, limi
 			username,
 			password,
 			email,
+			image,
 			created_at,
 			updated_at,
 			is_deleted
@@ -66,6 +67,7 @@ func (r *RepoUser) GetOneUser(uuid string) (*models.User, error) {
 			username,
 			email,
 			password,
+			image,
 			created_at
 		FROM public.users
 		WHERE uuid = $1 AND is_deleted = false;
@@ -86,16 +88,20 @@ func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models
 		query += "username = :username, "
 		params["username"] = username
 	}
-	if emailValue, exists := body["email"]; exists {
+	if email, exists := body["email"]; exists {
 		query += "email = :email, "
-		params["email"] = emailValue
+		params["email"] = email
 	}
 	if password, exists := body["password"]; exists {
 		query += "password = :password, "
 		params["password"] = password
 	}
+	if image, exists := body["image"]; exists {
+		query += "image = :image, "
+		params["image"] = image
+	}
 
-	query += "updated_at = NOW() WHERE uuid = :uuid RETURNING username, email, password, uuid, updated_at"
+	query += "updated_at = NOW() WHERE uuid = :uuid RETURNING username, email, password, uuid, image, updated_at"
 	params["uuid"] = uuid
 
 	var user models.User
