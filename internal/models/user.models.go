@@ -17,10 +17,11 @@ var _ = schemaUsers
 
 type User struct {
 	Uuid      string  `db:"uuid" json:"uuid" valid:"uuid~Uuid must be a valid UUID format"`
+	Role      string  `db:"role" json:"role,omitempty" valid:"matches(^admin$|^user$)~Username length must be admin or user"`
 	Username  string  `db:"username" json:"username" valid:"stringlength(5|100)~Username length must be between 5 and 100 characters"`
 	Email     string  `db:"email" json:"email" valid:"email~Invalid email format"`
 	Password  string  `db:"password,omitempty" json:"password,omitempty" valid:"stringlength(8|100)~Password length must be between 8 and 100 characters"`
-	Image     string  `db:"image" json:"image" valid:"-"`
+	Image     string  `db:"image" json:"image,omitempty" valid:"-"`
 	CreatedAt string  `db:"created_at,omitempty" json:"created_at,omitempty" valid:"-"`
 	UpdatedAt *string `db:"updated_at,omitempty" json:"updated_at,omitempty" valid:"-"`
 	IsDeleted bool    `db:"is_deleted,omitempty" json:"is_deleted,omitempty" valid:"-"`

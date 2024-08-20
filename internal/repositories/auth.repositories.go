@@ -19,14 +19,19 @@ func NewAuth(db *sqlx.DB) *RepoAuth {
 }
 
 func (r *RepoAuth) CreateUser(data *models.User) (string, *models.User, error) {
+	if data.Role == "" {
+		data.Role = "user"
+	}
+
 	query := `
-		INSERT INTO public.users (		
+		INSERT INTO public.users (
+			role,
 			username,
 			email,
-			password
+			password			
 		)
-		VALUES (:username, :email, :password)
-		RETURNING uuid, username, email, password, created_at;
+		VALUES (:role, :username, :email, :password)
+		RETURNING uuid, role, username, email, password, created_at;
 	`
 
 	var user models.User

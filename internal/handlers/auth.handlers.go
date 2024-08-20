@@ -43,7 +43,14 @@ func (h *AuthHandlers) Register(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"response": response, "data": createUser})
+
+	data := models.User{
+		Username:  createUser.Username,
+		Email:     createUser.Email,
+		CreatedAt: createUser.CreatedAt,
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"response": response, "data": data})
 }
 
 func (h *AuthHandlers) Login(ctx *gin.Context) {
@@ -60,23 +67,29 @@ func (h *AuthHandlers) Login(ctx *gin.Context) {
 		return
 	}
 
-	result, err := h.repo.GetByEmail(body.Email)
+	data, err := h.repo.GetByEmail(body.Email)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "message": err.Error()})
 		return
 	}
 
-	err = pkg.VerifyPassword(result.Password, body.Password)
+	err = pkg.VerifyPassword(data.Password, body.Password)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "wrong password", "message": err.Error()})
 		return
 	}
 
-	jwt := pkg.NewJWT(result.Uuid, result.Email)
+	jwt := pkg.NewJWT(data.Uuid, data.Email)
 	token, err := jwt.GenerateToken()
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "failed generate token", "message": err.Error()})
 		return
+	}
+
+	result := models.User{
+		Username:  data.Username,
+		Email:     data.Email,
+		CreatedAt: data.CreatedAt,
 	}
 
 	ctx.JSON(http.StatusCreated, gin.H{"message": "login success", "data": result, "token": token})
