@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -9,14 +10,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/repositories"
+	"github.com/irsy4drr01/coffeeshop_be_go/pkg"
 )
 
 type ProductHandlers struct {
 	repo repositories.ProductRepoInterface
+	cld  pkg.CloudinaryInterface
 }
 
-func NewProduct(repo repositories.ProductRepoInterface) *ProductHandlers {
-	return &ProductHandlers{repo: repo}
+func NewProduct(repo repositories.ProductRepoInterface, cld pkg.CloudinaryInterface) *ProductHandlers {
+	return &ProductHandlers{repo: repo, cld: cld}
 }
 
 func (h *ProductHandlers) PostProductHandler(ctx *gin.Context) {
@@ -110,10 +113,57 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		return
 	}
 
-	var body map[string]any
+	file, header, err := ctx.Request.FormFile("image")
+	if err != nil && err != http.ErrMissingFile {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+		return
+	}
+
+	body := map[string]interface{}{}
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	existingProduct, err := h.repo.GetOneProduct(uuid)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
+		return
+	}
+
+	if file != nil {
+		mimeType := header.Header.Get("Content-Type")
+		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Upload failed: wrong file type"})
+			return
+		}
+
+		// Hapus file gambar lama di Cloudinary jika ada
+		if existingProduct.Image != "" {
+			publicID := pkg.GetPublicIDFromURL(existingProduct.Image)
+			_, err := h.cld.DeleteFile(ctx, publicID)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete old file: " + err.Error()})
+				return
+			}
+		}
+
+		// Upload file baru ke Cloudinary
+		randomNumber, err := pkg.RandomInt(1000)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random number: " + err.Error()})
+			return
+		}
+
+		fileName := fmt.Sprintf("product-image-%d", randomNumber)
+		uploadResult, err := h.cld.UploadFile(ctx, file, fileName)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+			return
+		}
+
+		// Set URL gambar di body
+		body["image"] = uploadResult.SecureURL
 	}
 
 	// Validate only required fields that are present in the body

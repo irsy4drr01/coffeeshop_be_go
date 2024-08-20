@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"net/http"
 	"strconv"
 
@@ -72,14 +70,6 @@ func (h *UserHandlers) FetchDetailUserHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": userDetail})
 }
 
-func randomInt(max int) (int, error) {
-	nBig, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
-	if err != nil {
-		return 0, err
-	}
-	return int(nBig.Int64()), nil
-}
-
 func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
@@ -103,6 +93,13 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		return
 	}
 
+	// Ambil data pengguna dari database
+	existingUser, err := h.repo.GetOneUser(uuid)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
+		return
+	}
+
 	// Validasi file jika ada
 	if file != nil {
 		mimeType := header.Header.Get("Content-Type")
@@ -111,12 +108,23 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 			return
 		}
 
-		// Upload file ke Cloudinary
-		randomNumber, err := randomInt(1000)
+		// Hapus file gambar lama di Cloudinary jika ada
+		if existingUser.Image != "" {
+			publicID := pkg.GetPublicIDFromURL(existingUser.Image)
+			_, err := h.cld.DeleteFile(ctx, publicID)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete old file: " + err.Error()})
+				return
+			}
+		}
+
+		// Upload file baru ke Cloudinary
+		randomNumber, err := pkg.RandomInt(1000)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random number: " + err.Error()})
 			return
 		}
+
 		fileName := fmt.Sprintf("user-image-%d", randomNumber)
 		uploadResult, err := h.cld.UploadFile(ctx, file, fileName)
 		if err != nil {
@@ -128,6 +136,7 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		body["image"] = uploadResult.SecureURL
 	}
 
+	// Assign user attributes if they exist in the body
 	user := models.User{}
 	if username, exists := body["username"].(string); exists && username != "" {
 		user.Username = username
@@ -145,6 +154,7 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		return
 	}
 
+	// Update user di database
 	message, updatedUser, err := h.repo.UpdateUser(uuid, body)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

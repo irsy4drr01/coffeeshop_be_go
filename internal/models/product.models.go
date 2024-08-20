@@ -22,6 +22,7 @@ type Product struct {
 	ProductName string  `db:"product_name" json:"product_name,omitempty" valid:"stringlength(3|100)~ProductName length must be between 3 and 100 characters"`
 	Price       int     `db:"price" json:"price,omitempty" valid:"type(int)~Price must be a interger"`
 	Category    string  `db:"category" json:"category,omitempty" valid:"type(string)~Price must be a string"`
+	Image       string  `db:"image" json:"image" valid:"-"`
 	Description *string `db:"description,omitempty" json:"description,omitempty" valid:"stringlength(0|100)~Description length max 100 characters"`
 	CreatedAt   string  `db:"created_at,omitempty" json:"created_at,omitempty" valid:"-"`
 	UpdatedAt   *string `db:"updated_at,omitempty" json:"updated_at,omitempty" valid:"-"`

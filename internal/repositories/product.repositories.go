@@ -157,12 +157,16 @@ func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *
 		query += "category = :category, "
 		params["category"] = category
 	}
+	if image, exists := body["image"]; exists {
+		query += "image = :image, "
+		params["image"] = image
+	}
 	if description, exists := body["description"]; exists {
 		query += "description = :description, "
 		params["description"] = description
 	}
 
-	query += "updated_at = NOW() WHERE uuid = :uuid RETURNING id, product_name, price, category, description, updated_at, uuid"
+	query += "updated_at = NOW() WHERE uuid = :uuid RETURNING id, product_name, price, category, image, description, updated_at, uuid"
 	params["uuid"] = uuid
 
 	var product models.Product
