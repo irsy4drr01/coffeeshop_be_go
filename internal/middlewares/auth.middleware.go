@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -34,8 +35,37 @@ func AuthJwtMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		log.Printf("Role from JWT: %s", check.Role)
+
 		ctx.Set("userUuid", check.Uuid)
 		ctx.Set("email", check.Email)
+		ctx.Set("role", check.Role)
 		ctx.Next()
+	}
+}
+
+func RoleAuthMiddleware(allowedRoles ...string) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		// Dapatkan role dari context
+		role, exists := ctx.Get("role")
+		if !exists {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden", "message": "Role not found"})
+			ctx.Abort()
+			return
+		}
+
+		log.Printf("Role in context: %s", role)
+
+		// Cek role
+		for _, allowedRole := range allowedRoles {
+			if role == allowedRole {
+				ctx.Next()
+				return
+			}
+		}
+
+		// Jika role tidak diizinkan
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden", "message": "You don't have the necessary permissions"})
+		ctx.Abort()
 	}
 }

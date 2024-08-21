@@ -17,8 +17,9 @@ func user(g *gin.Engine, db *sqlx.DB) {
 
 	handler := handlers.NewUser(repo, cld)
 
-	route.GET("/", handler.FetchAllUserHandler)
-	route.GET("/:uuid", middleware.AuthJwtMiddleware(), handler.FetchDetailUserHandler)
-	route.PATCH("/:uuid", middleware.AuthJwtMiddleware(), handler.PatchUserHandler)
-	route.DELETE("/:uuid", middleware.AuthJwtMiddleware(), handler.DeleteUserHandler)
+	route.GET("/", middleware.AuthJwtMiddleware(), middleware.RoleAuthMiddleware("admin"), handler.FetchAllUserHandler)
+	// route.GET("/", handler.FetchAllUserHandler)
+	route.GET("/:uuid", middleware.AuthJwtMiddleware(), middleware.RoleAuthMiddleware("admin", "user"), handler.FetchDetailUserHandler)
+	route.PATCH("/:uuid", middleware.AuthJwtMiddleware(), middleware.RoleAuthMiddleware("admin", "user"), handler.PatchUserHandler)
+	route.DELETE("/:uuid", middleware.AuthJwtMiddleware(), middleware.RoleAuthMiddleware("admin", "user"), handler.DeleteUserHandler)
 }

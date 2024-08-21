@@ -79,7 +79,7 @@ func (h *AuthHandlers) Login(ctx *gin.Context) {
 		return
 	}
 
-	jwt := pkg.NewJWT(data.Uuid, data.Email)
+	jwt := pkg.NewJWT(data.Uuid, data.Email, data.Role)
 	token, err := jwt.GenerateToken()
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "failed generate token", "message": err.Error()})
@@ -87,6 +87,7 @@ func (h *AuthHandlers) Login(ctx *gin.Context) {
 	}
 
 	result := models.User{
+		Uuid:      data.Uuid,
 		Username:  data.Username,
 		Email:     data.Email,
 		CreatedAt: data.CreatedAt,

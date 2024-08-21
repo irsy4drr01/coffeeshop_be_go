@@ -50,7 +50,7 @@ func (r *RepoAuth) CreateUser(data *models.User) (string, *models.User, error) {
 
 func (r *RepoAuth) GetByEmail(email string) (*models.User, error) {
 	result := models.User{}
-	query := `SELECT uuid, username, email, password FROM public.users WHERE email=$1 and is_deleted = false`
+	query := `SELECT uuid, role, username, email, password FROM public.users WHERE email=$1 and is_deleted = false`
 	err := r.Get(&result, query, email)
 	if err != nil {
 		return nil, err

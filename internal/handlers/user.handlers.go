@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -84,13 +85,14 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Inisialisasi map body
+	// Ambil JSON data dari form-data
+	jsonStr := ctx.Request.FormValue("data")
 	body := map[string]interface{}{}
-
-	// Bind input dari form-data
-	if err := ctx.ShouldBind(&body); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
-		return
+	if jsonStr != "" {
+		if err := json.Unmarshal([]byte(jsonStr), &body); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
+			return
+		}
 	}
 
 	// Ambil data pengguna dari database
@@ -134,6 +136,21 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 
 		// Set URL gambar di body
 		body["image"] = uploadResult.SecureURL
+	}
+
+	// Jika gambar tidak diupdate, gunakan gambar lama
+	if _, exists := body["image"]; !exists || body["image"] == "" {
+		body["image"] = existingUser.Image
+	}
+
+	// Hash password jika ada
+	if password, exists := body["password"].(string); exists && password != "" {
+		hashedPassword, err := pkg.HashPassword(password)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password: " + err.Error()})
+			return
+		}
+		body["password"] = hashedPassword
 	}
 
 	// Assign user attributes if they exist in the body
