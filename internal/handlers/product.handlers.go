@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -109,28 +110,35 @@ func (h *ProductHandlers) FetchDetailProductHandler(ctx *gin.Context) {
 func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "uuid parameter is required"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UUID parameter is required"})
 		return
 	}
 
+	// Ambil file gambar jika ada
 	file, header, err := ctx.Request.FormFile("image")
 	if err != nil && err != http.ErrMissingFile {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
 		return
 	}
 
+	// Ambil JSON data dari form-data
+	jsonStr := ctx.Request.FormValue("data")
 	body := map[string]interface{}{}
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if jsonStr != "" {
+		if err := json.Unmarshal([]byte(jsonStr), &body); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
+			return
+		}
 	}
 
+	// Ambil data produk dari database
 	existingProduct, err := h.repo.GetOneProduct(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve product: " + err.Error()})
 		return
 	}
 
+	// Validasi file jika ada
 	if file != nil {
 		mimeType := header.Header.Get("Content-Type")
 		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
@@ -166,28 +174,33 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		body["image"] = uploadResult.SecureURL
 	}
 
-	// Validate only required fields that are present in the body
-	product := models.Product{}
-	if name, exists := body["product_name"]; exists {
-		product.ProductName = name.(string)
-	}
-	if price, exists := body["price"]; exists {
-		product.Price = price.(int)
-	}
-	if category, exists := body["category"]; exists {
-		product.Category = category.(string)
-	}
-	if description, exists := body["description"]; exists {
-		desc := description.(string)
-		product.Description = &desc
+	// Jika gambar tidak diupdate, gunakan gambar lama
+	if _, exists := body["image"]; !exists || body["image"] == "" {
+		body["image"] = existingProduct.Image
 	}
 
-	// Validate the fields present in the body
+	// Assign product attributes if they exist in the body
+	product := models.Product{}
+	if name, exists := body["product_name"].(string); exists && name != "" {
+		product.ProductName = name
+	}
+	if price, exists := body["price"].(int); exists && price != 0 {
+		product.Price = price
+	}
+	if category, exists := body["category"].(string); exists && category != "" {
+		product.Category = category
+	}
+	if description, exists := body["description"].(string); exists && description != "" {
+		product.Description = &description
+	}
+
+	// Validasi Product
 	if _, err := govalidator.ValidateStruct(product); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Update product di database
 	message, updatedProduct, err := h.repo.UpdateProduct(uuid, body)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
