@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/gin-gonic/gin"
-	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/repositories"
 	"github.com/irsy4drr01/coffeeshop_be_go/pkg"
 )
@@ -85,18 +83,13 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Ambil JSON data dari form-data
-	jsonStr := ctx.Request.FormValue("data")
-	body := map[string]interface{}{}
-	if jsonStr != "" {
-		if err := json.Unmarshal([]byte(jsonStr), &body); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
-			return
-		}
-	}
+	// Ambil data dari form-data (bukan dalam format JSON lagi)
+	username := ctx.Request.FormValue("username")
+	email := ctx.Request.FormValue("email")
+	password := ctx.Request.FormValue("password")
 
 	// Ambil data pengguna dari database
-	existingUser, err := h.repo.GetOneUser(uuid)
+	user, err := h.repo.GetOneUser(uuid)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
 		return
@@ -111,8 +104,8 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		}
 
 		// Hapus file gambar lama di Cloudinary jika ada
-		if existingUser.Image != "" {
-			publicID := pkg.GetPublicIDFromURL(existingUser.Image)
+		if user.Image != "" {
+			publicID := pkg.GetPublicIDFromURL(user.Image)
 			_, err := h.cld.DeleteFile(ctx, publicID)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete old file: " + err.Error()})
@@ -135,34 +128,25 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		}
 
 		// Set URL gambar di body
-		body["image"] = uploadResult.SecureURL
-	}
-
-	// Jika gambar tidak diupdate, gunakan gambar lama
-	if _, exists := body["image"]; !exists || body["image"] == "" {
-		body["image"] = existingUser.Image
+		user.Image = uploadResult.SecureURL
 	}
 
 	// Hash password jika ada
-	if password, exists := body["password"].(string); exists && password != "" {
+	if password != "" {
 		hashedPassword, err := pkg.HashPassword(password)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password: " + err.Error()})
 			return
 		}
-		body["password"] = hashedPassword
+		user.Password = hashedPassword
 	}
 
 	// Assign user attributes if they exist in the body
-	user := models.User{}
-	if username, exists := body["username"].(string); exists && username != "" {
+	if username != "" {
 		user.Username = username
 	}
-	if email, exists := body["email"].(string); exists && email != "" {
+	if email != "" {
 		user.Email = email
-	}
-	if password, exists := body["password"].(string); exists && password != "" {
-		user.Password = password
 	}
 
 	// Validasi User
@@ -172,7 +156,13 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	}
 
 	// Update user di database
-	message, updatedUser, err := h.repo.UpdateUser(uuid, body)
+	message, updatedUser, err := h.repo.UpdateUser(uuid, map[string]interface{}{
+		"username": user.Username,
+		"email":    user.Email,
+		"password": user.Password,
+		"image":    user.Image,
+	})
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
