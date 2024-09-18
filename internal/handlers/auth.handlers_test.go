@@ -63,15 +63,68 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, 201, actualResponse.Status, "Status code doesn't match")
 	assert.Equal(t, "User created successfully.", actualResponse.Message, "Message doesn't match")
 
-	var actualData map[string]interface{}
-	if data, ok := actualResponse.Data.(map[string]interface{}); ok {
-		actualData = data
-	} else {
-		t.Fatal("data is not in the expected format")
-	}
+	// var actualData map[string]interface{}
+	// if data, ok := actualResponse.Data.(map[string]interface{}); ok {
+	// 	actualData = data
+	// } else {
+	// 	t.Fatal("data is not in the expected format")
+	// }
+
+	actualData := actualResponse.Data.(map[string]interface{})
 
 	assert.Equal(t, "12345", actualData["uuid"], "UUID doesn't match")
 	assert.Equal(t, "testuser", actualData["username"], "Username doesn't match")
 	assert.Equal(t, "testing@gmail.com", actualData["email"], "Email doesn't match")
 	assert.Equal(t, "2024-01-01T00:00:00Z", actualData["created_at"], "CreatedAt doesn't match")
+}
+
+func TestLogin(t *testing.T) {
+	router := gin.Default()
+	authRepositoryMock := new(repositories.AuthRepoMock)
+	handler := NewAuth(authRepositoryMock)
+
+	authRepositoryMock.On("GetByEmail", mock.Anything).Return(&models.User{
+		Uuid:     "12345",
+		Username: "testuser",
+		Email:    "testing@gmail.com",
+		Password: "$2a$10$1rgEe.p59ssRcHmhqv..tel2nYyAx3XXLxPwRADNvydsMQueu6ybW",
+	}, nil)
+
+	router.POST("/auth/login", handler.Login)
+
+	requestBody, _ := json.Marshal(map[string]string{
+		"email":    "testing@gmail.com",
+		"password": "password",
+	})
+
+	req, err := http.NewRequest("POST", "/auth/login", bytes.NewBuffer(requestBody))
+	assert.NoError(t, err, "An error occurred while making the request")
+	req.Header.Set("Content-Type", "application/json")
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+
+	assert.Equal(t, http.StatusOK, recorder.Code, "Status code doesn't match")
+
+	var actualResponse pkg.LoginResponse
+	err = json.Unmarshal(recorder.Body.Bytes(), &actualResponse)
+	assert.NoError(t, err, "Error: Failed get response")
+
+	assert.Equal(t, 200, actualResponse.Status, "Status code doesn't match")
+	assert.Equal(t, "Login success", actualResponse.Message, "Message doesn't match")
+
+	// var actualData map[string]interface{}
+	// if data, ok := actualResponse.Data.(map[string]interface{}); ok {
+	// 	actualData = data
+	// } else {
+	// 	t.Fatal("data is not in the expected format")
+	// }
+
+	actualData := actualResponse.Data.(map[string]interface{})
+
+	assert.Equal(t, "12345", actualData["uuid"], "UUID doesn't match")
+	assert.Equal(t, "testuser", actualData["username"], "Username doesn't match")
+	assert.Equal(t, "testing@gmail.com", actualData["email"], "Email doesn't match")
+
+	assert.NotEmpty(t, actualResponse.Token, "Token should not be empty")
 }
