@@ -14,7 +14,7 @@ func example() {
 	router.GET("/query", queryString)    // reqQuery
 	router.POST("/user", reqBody)        // reqBody
 
-	router.Run(":8081")
+	router.Run(":8000")
 }
 
 func handler(ctx *gin.Context) {
