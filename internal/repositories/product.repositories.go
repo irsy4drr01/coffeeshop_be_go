@@ -8,11 +8,11 @@ import (
 )
 
 type ProductRepoInterface interface {
-	CreateProduct(data *models.Product) (string, *models.Product, error)
+	CreateProduct(data *models.Product) (*models.Product, error)
 	GetAllProducts(searchProductName string, minPrice int, maxPrice int, category string, sort string, page int, limit int) (*models.Products, error)
 	GetOneProduct(uuid string) (*models.Product, error)
-	UpdateProduct(uuid string, body map[string]any) (string, *models.Product, error)
-	DeleteProduct(uuid string) (string, *models.Product, error)
+	UpdateProduct(uuid string, body map[string]any) (*models.Product, error)
+	DeleteProduct(uuid string) (*models.Product, error)
 }
 
 type RepoProduct struct {
@@ -23,7 +23,7 @@ func NewProduct(db *sqlx.DB) *RepoProduct {
 	return &RepoProduct{db}
 }
 
-func (r *RepoProduct) CreateProduct(data *models.Product) (string, *models.Product, error) {
+func (r *RepoProduct) CreateProduct(data *models.Product) (*models.Product, error) {
 	query := `
 		INSERT INTO public.product (
 			product_name,
@@ -38,15 +38,15 @@ func (r *RepoProduct) CreateProduct(data *models.Product) (string, *models.Produ
 	var product models.Product
 	stmt, err := r.DB.PrepareNamed(query)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	err = stmt.Get(&product, data)
 	stmt.Close() // Menutup statement setelah digunakan
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return "Product created successfully.", &product, nil
+	return &product, nil
 }
 
 func (r *RepoProduct) GetAllProducts(searchProductName string, minPrice int, maxPrice int, category string, sort string, page int, limit int) (*models.Products, error) {
@@ -141,7 +141,7 @@ func (r *RepoProduct) GetOneProduct(uuid string) (*models.Product, error) {
 	return &product, nil
 }
 
-func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *models.Product, error) {
+func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (*models.Product, error) {
 	query := `UPDATE product SET `
 	params := map[string]interface{}{}
 
@@ -172,17 +172,17 @@ func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (string, *
 	var product models.Product
 	stmt, args, err := sqlx.Named(query, params)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	stmt = r.Rebind(stmt) // Rebind the statement according to the driver
 	if err := r.QueryRowx(stmt, args...).StructScan(&product); err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return "Product updated successfully.", &product, nil
+	return &product, nil
 }
 
-func (r *RepoProduct) DeleteProduct(uuid string) (string, *models.Product, error) {
+func (r *RepoProduct) DeleteProduct(uuid string) (*models.Product, error) {
 	query := `
 		UPDATE public.product
 		SET
@@ -193,7 +193,7 @@ func (r *RepoProduct) DeleteProduct(uuid string) (string, *models.Product, error
 
 	var product models.Product
 	if err := r.Get(&product, query, uuid); err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return "Product deleted successfully.", &product, nil
+	return &product, nil
 }

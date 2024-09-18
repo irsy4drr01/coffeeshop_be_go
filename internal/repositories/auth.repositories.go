@@ -6,7 +6,7 @@ import (
 )
 
 type AuthRepoInterface interface {
-	CreateUser(data *models.User) (string, *models.User, error)
+	CreateUser(data *models.User) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
 }
 
@@ -18,7 +18,7 @@ func NewAuth(db *sqlx.DB) *RepoAuth {
 	return &RepoAuth{db}
 }
 
-func (r *RepoAuth) CreateUser(data *models.User) (string, *models.User, error) {
+func (r *RepoAuth) CreateUser(data *models.User) (*models.User, error) {
 	if data.Role == "" {
 		data.Role = "user"
 	}
@@ -37,15 +37,15 @@ func (r *RepoAuth) CreateUser(data *models.User) (string, *models.User, error) {
 	var user models.User
 	stmt, err := r.DB.PrepareNamed(query)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	err = stmt.Get(&user, data)
 	stmt.Close() // Menutup statement setelah digunakan
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return "User created successfully.", &user, nil
+	return &user, nil
 }
 
 func (r *RepoAuth) GetByEmail(email string) (*models.User, error) {

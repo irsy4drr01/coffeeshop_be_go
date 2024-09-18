@@ -8,8 +8,8 @@ import (
 type UserRepoInterface interface {
 	GetAllUser(searchUserName string, sort string, page int, limit int) (*models.Users, error)
 	GetOneUser(uuid string) (*models.User, error)
-	UpdateUser(uuid string, body map[string]any) (string, *models.User, error)
-	DeleteUser(uuid string) (string, *models.User, error)
+	UpdateUser(uuid string, body map[string]any) (*models.User, error)
+	DeleteUser(uuid string) (*models.User, error)
 }
 
 type RepoUser struct {
@@ -80,7 +80,7 @@ func (r *RepoUser) GetOneUser(uuid string) (*models.User, error) {
 	return &userDetail, nil
 }
 
-func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models.User, error) {
+func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (*models.User, error) {
 	query := `UPDATE users SET `
 	params := map[string]interface{}{}
 
@@ -107,17 +107,17 @@ func (r *RepoUser) UpdateUser(uuid string, body map[string]any) (string, *models
 	var user models.User
 	stmt, args, err := sqlx.Named(query, params)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	stmt = r.Rebind(stmt) // Rebind the statement according to the driver
 	if err := r.QueryRowx(stmt, args...).StructScan(&user); err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return "User updated successfully.", &user, nil
+	return &user, nil
 }
 
-func (r *RepoUser) DeleteUser(uuid string) (string, *models.User, error) {
+func (r *RepoUser) DeleteUser(uuid string) (*models.User, error) {
 	query := `
 		UPDATE public.users
 		SET
@@ -128,7 +128,7 @@ func (r *RepoUser) DeleteUser(uuid string) (string, *models.User, error) {
 
 	var user models.User
 	if err := r.Get(&user, query, uuid); err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return "User deleted successfully.", &user, nil
+	return &user, nil
 }

@@ -6,8 +6,8 @@ import (
 )
 
 type FavoriteRepoInterface interface {
-	AddFavorite(userID, productID int) (string, *models.Favorite, error)
-	RemoveFavorite(userID, productID int) (string, error)
+	AddFavorite(userID, productID int) (*models.Favorite, error)
+	RemoveFavorite(userID, productID int) error
 	GetFavorites(userID int) (*models.Favorites, error)
 }
 
@@ -19,7 +19,7 @@ func NewFavorite(db *sqlx.DB) *RepoFavorite {
 	return &RepoFavorite{db}
 }
 
-func (r *RepoFavorite) AddFavorite(userID, productID int) (string, *models.Favorite, error) {
+func (r *RepoFavorite) AddFavorite(userID, productID int) (*models.Favorite, error) {
 	insertQuery := `
         INSERT INTO public.favorite (
             user_id,
@@ -31,7 +31,7 @@ func (r *RepoFavorite) AddFavorite(userID, productID int) (string, *models.Favor
 
 	_, err := r.Exec(insertQuery, userID, productID)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	selectQuery := `
@@ -48,22 +48,22 @@ func (r *RepoFavorite) AddFavorite(userID, productID int) (string, *models.Favor
 
 	var favorite models.Favorite
 	if err := r.Get(&favorite, selectQuery, userID, productID); err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return "Product added to favorites successfully.", &favorite, nil
+	return &favorite, nil
 }
 
-func (r *RepoFavorite) RemoveFavorite(userID, productID int) (string, error) {
+func (r *RepoFavorite) RemoveFavorite(userID, productID int) error {
 	query := `
 		DELETE FROM public.favorite
 		WHERE user_id = $1 AND product_id = $2;
 	`
 
 	if _, err := r.Exec(query, userID, productID); err != nil {
-		return "", err
+		return err
 	}
-	return "Product removed from favorites successfully.", nil
+	return nil
 }
 
 func (r *RepoFavorite) GetFavorites(userID int) (*models.Favorites, error) {
