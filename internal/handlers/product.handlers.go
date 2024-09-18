@@ -24,28 +24,33 @@ func NewProduct(repo repositories.ProductRepoInterface, cld pkg.CloudinaryInterf
 }
 
 func (h *ProductHandlers) PostProductHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	product := models.Product{}
 
 	if err := ctx.ShouldBind(&product); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.BadRequest("Invalid request", err.Error())
 		return
 	}
 
 	_, err := govalidator.ValidateStruct(product)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.BadRequest("Validation failed", err.Error())
 		return
 	}
 
-	response, createProduct, err := h.repo.CreateProduct(&product)
+	createProduct, err := h.repo.CreateProduct(&product)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to create product", err.Error())
 		return
 	}
-	ctx.JSON(200, gin.H{"response": response, "data": createProduct})
+
+	responder.Created("Product created successfully.", createProduct)
 }
 
 func (h *ProductHandlers) FetchAllProductsHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	searchProductName := ctx.DefaultQuery("searchProductName", "")
 	minPriceStr := ctx.DefaultQuery("minPrice", "0")
 	maxPriceStr := ctx.DefaultQuery("maxPrice", strconv.Itoa(math.MaxInt32))
@@ -61,63 +66,69 @@ func (h *ProductHandlers) FetchAllProductsHandler(ctx *gin.Context) {
 
 	// Convert minPrice and maxPrice to int
 	if minPrice, err = strconv.Atoi(minPriceStr); err != nil || minPrice < 0 {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid minPrice"})
+		responder.BadRequest("Invalid minPrice", err.Error())
 		return
 	}
 	if maxPriceStr == strconv.Itoa(math.MaxInt32) {
 		maxPrice = math.MaxInt32 // Set to maximum value
 	} else {
 		if maxPrice, err = strconv.Atoi(maxPriceStr); err != nil || maxPrice < 0 {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid maxPrice"})
+			responder.BadRequest("Invalid maxPrice", err.Error())
 			return
 		}
 	}
 
 	// Convert page and limit to int
 	if page, err = strconv.Atoi(pageStr); err != nil || page < 1 {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+		responder.BadRequest("Invalid page number", err.Error())
 		return
 	}
+
 	if limit, err = strconv.Atoi(limitStr); err != nil || limit < 1 {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		responder.BadRequest("Invalid limit", err.Error())
 		return
 	}
 
 	data, err := h.repo.GetAllProducts(searchProductName, minPrice, maxPrice, category, sort, page, limit)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to fetch products", err.Error())
 		return
 	}
-	ctx.JSON(http.StatusOK, data)
+
+	responder.Success("Products fetched successfully", data)
 }
 
 func (h *ProductHandlers) FetchDetailProductHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "uuid parameter is required"})
+		responder.BadRequest("UUID parameter is required", nil)
 		return
 	}
 
 	product, err := h.repo.GetOneProduct(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		responder.NotFound("Product not found", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": product})
+	responder.Success("Product details fetched successfully", product)
 }
 
 func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UUID parameter is required"})
+		responder.BadRequest("UUID parameter is required", nil)
 		return
 	}
 
 	// Ambil file gambar jika ada
 	file, header, err := ctx.Request.FormFile("image")
 	if err != nil && err != http.ErrMissingFile {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+		responder.BadRequest("Failed to upload file", err.Error())
 		return
 	}
 
@@ -126,7 +137,7 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 	body := map[string]interface{}{}
 	if jsonStr != "" {
 		if err := json.Unmarshal([]byte(jsonStr), &body); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
+			responder.BadRequest("Failed to upload file", err.Error())
 			return
 		}
 	}
@@ -134,7 +145,7 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 	// Ambil data produk dari database
 	existingProduct, err := h.repo.GetOneProduct(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve product: " + err.Error()})
+		responder.InternalServerError("Failed to retrieve product", err.Error())
 		return
 	}
 
@@ -142,7 +153,7 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 	if file != nil {
 		mimeType := header.Header.Get("Content-Type")
 		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Upload failed: wrong file type"})
+			responder.BadRequest("Upload failed - wrong file type", nil)
 			return
 		}
 
@@ -151,7 +162,7 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 			publicID := pkg.GetPublicIDFromURL(existingProduct.Image)
 			_, err := h.cld.DeleteFile(ctx, publicID)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete old file: " + err.Error()})
+				responder.InternalServerError("Failed to delete old file", err.Error())
 				return
 			}
 		}
@@ -159,14 +170,14 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		// Upload file baru ke Cloudinary
 		randomNumber, err := pkg.RandomInt(1000)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random number: " + err.Error()})
+			responder.InternalServerError("Failed to generate random number", err.Error())
 			return
 		}
 
 		fileName := fmt.Sprintf("product-image-%d", randomNumber)
 		uploadResult, err := h.cld.UploadFile(ctx, file, fileName)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+			responder.BadRequest("Failed to upload file", err.Error())
 			return
 		}
 
@@ -196,32 +207,34 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 
 	// Validasi Product
 	if _, err := govalidator.ValidateStruct(product); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.BadRequest("Validation failed", err.Error())
 		return
 	}
 
 	// Update product di database
-	message, updatedProduct, err := h.repo.UpdateProduct(uuid, body)
+	updatedProduct, err := h.repo.UpdateProduct(uuid, body)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to update product", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": message, "data": updatedProduct})
+	responder.Success("Product updated successfully", updatedProduct)
 }
 
 func (h *ProductHandlers) DeleteProductHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "uuid parameter is required"})
+		responder.BadRequest("UUID parameter is required", nil)
 		return
 	}
 
-	message, deletedProduct, err := h.repo.DeleteProduct(uuid)
+	deletedProduct, err := h.repo.DeleteProduct(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to delete product", err.Error())
 		return
 	}
 
-	ctx.JSON(200, gin.H{"message": message, "data": deletedProduct})
+	responder.Success("Product deleted successfully", deletedProduct)
 }

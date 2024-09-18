@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"net/http"
-
 	"github.com/asaskevich/govalidator"
 	"github.com/gin-gonic/gin"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
@@ -19,70 +17,75 @@ func NewAuth(repo repositories.AuthRepoInterface) *AuthHandlers {
 }
 
 func (h *AuthHandlers) Register(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	user := models.User{}
 
 	if err := ctx.ShouldBind(&user); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
+		responder.BadRequest("Invalid input", err.Error())
 		return
 	}
 
 	_, err := govalidator.ValidateStruct(user)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.BadRequest("Validation failed", err.Error())
 		return
 	}
 
 	user.Password, err = pkg.HashPassword(user.Password)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password: " + err.Error()})
+		responder.InternalServerError("Failed to hash password", err.Error())
 		return
 	}
 
-	response, createUser, err := h.repo.CreateUser(&user)
+	createUser, err := h.repo.CreateUser(&user)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Internal Server Error", err.Error())
 		return
 	}
 
 	data := models.User{
+		Uuid:      createUser.Uuid,
 		Username:  createUser.Username,
 		Email:     createUser.Email,
 		CreatedAt: createUser.CreatedAt,
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"response": response, "data": data})
+	responder.Created("User created successfully.", data)
 }
 
 func (h *AuthHandlers) Login(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	body := models.User{}
 
 	if err := ctx.ShouldBind(&body); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "message": err.Error()})
+		responder.BadRequest("Login failed", err.Error())
 		return
 	}
 
 	_, err := govalidator.ValidateStruct(&body)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "message": err.Error()})
+		responder.BadRequest("Login failed!", err.Error())
 		return
 	}
 
 	data, err := h.repo.GetByEmail(body.Email)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "message": err.Error()})
+		responder.BadRequest("Login failed!", err.Error())
 		return
 	}
 
 	err = pkg.VerifyPassword(data.Password, body.Password)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "wrong password", "message": err.Error()})
+		responder.BadRequest("Wrong password!", err.Error())
 		return
 	}
 
 	jwt := pkg.NewJWT(data.Uuid, data.Email, data.Role)
 	token, err := jwt.GenerateToken()
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "failed generate token", "message": err.Error()})
+		responder.Unauthorized("Failed to generate token", err.Error())
 		return
 	}
 
@@ -93,5 +96,5 @@ func (h *AuthHandlers) Login(ctx *gin.Context) {
 		CreatedAt: data.CreatedAt,
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "login success", "data": result, "token": token})
+	responder.LoginSuccess("Login success", result, token)
 }

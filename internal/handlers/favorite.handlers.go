@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/models"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/repositories"
+	"github.com/irsy4drr01/coffeeshop_be_go/pkg"
 )
 
 type FavoriteHandlers struct {
@@ -18,54 +18,60 @@ func NewFavorite(repo repositories.FavoriteRepoInterface) *FavoriteHandlers {
 }
 
 func (h *FavoriteHandlers) AddFavoriteHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	var req models.Favorite
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.BadRequest("Invalid request body", err.Error())
 		return
 	}
 
-	message, favorite, err := h.repo.AddFavorite(req.UserID, req.ProductID)
+	favorite, err := h.repo.AddFavorite(req.UserID, req.ProductID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to add product to favorites", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": message, "data": favorite})
+	responder.Success("Product added to favorites successfully.", favorite)
 }
 
 func (h *FavoriteHandlers) RemoveFavoriteHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	userID, err := strconv.Atoi(ctx.Param("user_id"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id"})
+		responder.BadRequest("Invalid user_id", err.Error())
 		return
 	}
 	productID, err := strconv.Atoi(ctx.Param("product_id"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product_id"})
+		responder.BadRequest("Invalid product_id", err.Error())
 		return
 	}
 
-	message, err := h.repo.RemoveFavorite(userID, productID)
+	err = h.repo.RemoveFavorite(userID, productID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to remove product from favorites", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": message})
+	responder.Success("Product removed from favorites successfully.", nil)
 }
 
 func (h *FavoriteHandlers) GetFavoritesHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	userID, err := strconv.Atoi(ctx.Param("user_id"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id"})
+		responder.BadRequest("Invalid user_id", err.Error())
 		return
 	}
 
 	favorites, err := h.repo.GetFavorites(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to retrieve favorites", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": favorites})
+	responder.Success("Get favorites successfully.", favorites)
 }

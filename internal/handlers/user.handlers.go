@@ -21,6 +21,8 @@ func NewUser(repo repositories.UserRepoInterface, cld pkg.CloudinaryInterface) *
 }
 
 func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	searchUserName := ctx.DefaultQuery("searchUserName", "")
 	sortBy := ctx.DefaultQuery("sort", "")
 
@@ -29,57 +31,61 @@ func (h *UserHandlers) FetchAllUserHandler(ctx *gin.Context) {
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
+		responder.BadRequest("Error", "Invalid page parameter")
 		return
 	}
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		responder.BadRequest("Invalid limit parameter", err.Error())
 		return
 	}
 
-	users, err := h.repo.GetAllUser(searchUserName, sortBy, page, limit)
+	result, err := h.repo.GetAllUser(searchUserName, sortBy, page, limit)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to fetch users", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, users)
+	responder.Success("Users fetched successfully", result)
 }
 
 func (h *UserHandlers) FetchDetailUserHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UUID parameter is required"})
+		responder.BadRequest("UUID parameter is required", nil)
 		return
 	}
 
 	userDetail, err := h.repo.GetOneUser(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to fetch user detail", err.Error())
 		return
 	}
 
 	if userDetail == nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		responder.NotFound("User not found", nil)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": userDetail})
+	responder.Success("User detail fetched successfully", userDetail)
 }
 
 func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UUID parameter is required"})
+		responder.BadRequest("UUID parameter is required", nil)
 		return
 	}
 
 	// Ambil file gambar jika ada
 	file, header, err := ctx.Request.FormFile("image")
 	if err != nil && err != http.ErrMissingFile {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+		responder.BadRequest("Failed to upload file", err.Error())
 		return
 	}
 
@@ -91,7 +97,7 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	// Ambil data pengguna dari database
 	user, err := h.repo.GetOneUser(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user: " + err.Error()})
+		responder.InternalServerError("Failed to retrieve user", err.Error())
 		return
 	}
 
@@ -99,7 +105,7 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	if file != nil {
 		mimeType := header.Header.Get("Content-Type")
 		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Upload failed: wrong file type"})
+			responder.BadRequest("Upload failed - wrong file type", nil)
 			return
 		}
 
@@ -108,7 +114,7 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 			publicID := pkg.GetPublicIDFromURL(user.Image)
 			_, err := h.cld.DeleteFile(ctx, publicID)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete old file: " + err.Error()})
+				responder.InternalServerError("Failed to delete old file", err.Error())
 				return
 			}
 		}
@@ -116,14 +122,14 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 		// Upload file baru ke Cloudinary
 		randomNumber, err := pkg.RandomInt(1000)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random number: " + err.Error()})
+			responder.InternalServerError("Failed to generate random number", err.Error())
 			return
 		}
 
 		fileName := fmt.Sprintf("user-image-%d", randomNumber)
 		uploadResult, err := h.cld.UploadFile(ctx, file, fileName)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file: " + err.Error()})
+			responder.BadRequest("Failed to upload file", err.Error())
 			return
 		}
 
@@ -135,7 +141,7 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	if password != "" {
 		hashedPassword, err := pkg.HashPassword(password)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password: " + err.Error()})
+			responder.InternalServerError("Failed to hash password", err.Error())
 			return
 		}
 		user.Password = hashedPassword
@@ -151,12 +157,12 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 
 	// Validasi User
 	if _, err := govalidator.ValidateStruct(user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		responder.BadRequest("Validation error", err.Error())
 		return
 	}
 
 	// Update user di database
-	message, updatedUser, err := h.repo.UpdateUser(uuid, map[string]interface{}{
+	updatedUser, err := h.repo.UpdateUser(uuid, map[string]interface{}{
 		"username": user.Username,
 		"email":    user.Email,
 		"password": user.Password,
@@ -164,25 +170,32 @@ func (h *UserHandlers) PatchUserHandler(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to update user", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": message, "data": updatedUser})
+	responder.Success("User updated successfully", updatedUser)
 }
 
 func (h *UserHandlers) DeleteUserHandler(ctx *gin.Context) {
+	responder := pkg.NewResponse(ctx)
+
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UUID parameter is required"})
+		responder.BadRequest("UUID parameter is required", nil)
 		return
 	}
 
-	message, deletedUser, err := h.repo.DeleteUser(uuid)
+	deletedUser, err := h.repo.DeleteUser(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responder.InternalServerError("Failed to delete user", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": message, "data": deletedUser})
+	if deletedUser == nil {
+		responder.NotFound("User not found", nil)
+		return
+	}
+
+	responder.Success("Delete user successfully", deletedUser)
 }
