@@ -32,7 +32,7 @@ func (h *FavoriteHandlers) AddFavoriteHandler(ctx *gin.Context) {
 		return
 	}
 
-	responder.Success("Product added to favorites successfully.", favorite)
+	responder.Created("Product added to favorites successfully.", favorite)
 }
 
 func (h *FavoriteHandlers) RemoveFavoriteHandler(ctx *gin.Context) {
