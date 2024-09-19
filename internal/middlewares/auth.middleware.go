@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"log"
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -11,17 +10,19 @@ import (
 
 func AuthAndRoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		responder := pkg.NewResponse(ctx)
+
 		// Pengecekan header Authorization
 		header := ctx.GetHeader("Authorization")
 		if header == "" {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized", "message": "Authorization header missing"})
+			responder.Unauthorized("Authorization header missing", "Unauthorized")
 			ctx.Abort()
 			return
 		}
 
 		// Validasi format Bearer token
 		if !strings.Contains(header, "Bearer") {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized", "message": "Invalid Bearer Token"})
+			responder.Unauthorized("Invalid Bearer Token", "Unauthorized")
 			ctx.Abort()
 			return
 		}
@@ -32,7 +33,7 @@ func AuthAndRoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 		// Verifikasi token
 		check, err := pkg.VerifyToken(token)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized", "message": "Invalid Bearer Token"})
+			responder.Unauthorized("Invalid Bearer Token", "Unauthorized")
 			ctx.Abort()
 			return
 		}
@@ -58,7 +59,7 @@ func AuthAndRoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 
 			// Jika role tidak diizinkan
 			if !roleAllowed {
-				ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden", "message": "You don't have the necessary permissions"})
+				responder.Forbidden("You don't have the necessary permissions", "Forbidden")
 				ctx.Abort()
 				return
 			}
