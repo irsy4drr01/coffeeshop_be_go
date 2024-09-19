@@ -9,25 +9,27 @@ import (
 	"github.com/irsy4drr01/coffeeshop_be_go/pkg"
 )
 
-func AuthJwtMiddleware() gin.HandlerFunc {
+func AuthAndRoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var header string
-
-		if header = ctx.GetHeader("Authorization"); header == "" {
+		// Pengecekan header Authorization
+		header := ctx.GetHeader("Authorization")
+		if header == "" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized", "message": "Authorization header missing"})
 			ctx.Abort()
 			return
 		}
 
+		// Validasi format Bearer token
 		if !strings.Contains(header, "Bearer") {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized", "message": "Invalid Bearer Token"})
 			ctx.Abort()
 			return
 		}
 
-		// Bearer Bearer token
+		// Ekstraksi token
 		token := strings.Replace(header, "Bearer ", "", -1)
 
+		// Verifikasi token
 		check, err := pkg.VerifyToken(token)
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized", "message": "Invalid Bearer Token"})
@@ -35,37 +37,33 @@ func AuthJwtMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Role from JWT: %s", check.Role)
-
+		// Simpan data dari token ke dalam context
 		ctx.Set("userUuid", check.Uuid)
 		ctx.Set("email", check.Email)
 		ctx.Set("role", check.Role)
-		ctx.Next()
-	}
-}
 
-func RoleAuthMiddleware(allowedRoles ...string) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		// Dapatkan role dari context
-		role, exists := ctx.Get("role")
-		if !exists {
-			ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden", "message": "Role not found"})
-			ctx.Abort()
-			return
-		}
+		// Pengecekan role
+		if len(allowedRoles) > 0 {
+			role := check.Role
+			log.Printf("Role from JWT: %s", role)
 
-		log.Printf("Role in context: %s", role)
+			// Cek apakah role diperbolehkan
+			roleAllowed := false
+			for _, allowedRole := range allowedRoles {
+				if role == allowedRole {
+					roleAllowed = true
+					break
+				}
+			}
 
-		// Cek role
-		for _, allowedRole := range allowedRoles {
-			if role == allowedRole {
-				ctx.Next()
+			// Jika role tidak diizinkan
+			if !roleAllowed {
+				ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden", "message": "You don't have the necessary permissions"})
+				ctx.Abort()
 				return
 			}
 		}
 
-		// Jika role tidak diizinkan
-		ctx.JSON(http.StatusForbidden, gin.H{"error": "Forbidden", "message": "You don't have the necessary permissions"})
-		ctx.Abort()
+		ctx.Next()
 	}
 }

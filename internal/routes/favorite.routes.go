@@ -15,7 +15,7 @@ func favorite(g *gin.Engine, db *sqlx.DB) {
 
 	handler := handlers.NewFavorite(repo)
 
-	route.GET("/:user_id", middleware.AuthJwtMiddleware(), middleware.RoleAuthMiddleware("user"), handler.GetFavoritesHandler)
-	route.POST("/", middleware.AuthJwtMiddleware(), middleware.RoleAuthMiddleware("user"), handler.AddFavoriteHandler)
-	route.DELETE("/:user_id/:product_id", middleware.AuthJwtMiddleware(), middleware.RoleAuthMiddleware("user"), handler.RemoveFavoriteHandler)
+	route.GET("/:user_id", middleware.AuthAndRoleMiddleware("user"), handler.GetFavoritesHandler)
+	route.POST("/", middleware.AuthAndRoleMiddleware("user"), handler.AddFavoriteHandler)
+	route.DELETE("/:user_id/:product_id", middleware.AuthAndRoleMiddleware("user"), handler.RemoveFavoriteHandler)
 }
