@@ -29,4 +29,11 @@ type Product struct {
 	IsDeleted   bool    `db:"is_deleted,omitempty" json:"is_deleted,omitempty" valid:"-"`
 }
 
+type DeleteProduct struct {
+	ID          int    `db:"id" json:"id,omitempty" valid:"-"`
+	Uuid        string `db:"uuid" json:"uuid,omitempty" valid:"uuid~Uuid must be a valid UUID format"`
+	ProductName string `db:"product_name" json:"product_name,omitempty" valid:"stringlength(3|100)~ProductName length must be between 3 and 100 characters"`
+	IsDeleted   bool   `db:"is_deleted,omitempty" json:"is_deleted,omitempty" valid:"-"`
+}
+
 type Products []Product
