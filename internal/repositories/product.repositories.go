@@ -12,7 +12,7 @@ type ProductRepoInterface interface {
 	GetAllProducts(searchProductName string, minPrice int, maxPrice int, category string, sort string, page int, limit int) (*models.Products, error)
 	GetOneProduct(uuid string) (*models.Product, error)
 	UpdateProduct(uuid string, body map[string]any) (*models.Product, error)
-	DeleteProduct(uuid string) (*models.Product, error)
+	DeleteProduct(uuid string) (*models.DeleteProduct, error)
 }
 
 type RepoProduct struct {
@@ -182,16 +182,16 @@ func (r *RepoProduct) UpdateProduct(uuid string, body map[string]any) (*models.P
 	return &product, nil
 }
 
-func (r *RepoProduct) DeleteProduct(uuid string) (*models.Product, error) {
+func (r *RepoProduct) DeleteProduct(uuid string) (*models.DeleteProduct, error) {
 	query := `
 		UPDATE public.product
 		SET
 			is_deleted = true
 		WHERE uuid = $1
-		RETURNING id, product_name, is_deleted;
+		RETURNING id, uuid, product_name, is_deleted;
 	`
 
-	var product models.Product
+	var product models.DeleteProduct
 	if err := r.Get(&product, query, uuid); err != nil {
 		return nil, err
 	}
