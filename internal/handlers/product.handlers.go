@@ -126,7 +126,7 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 	}
 
 	// Ambil file gambar jika ada
-	file, header, err := ctx.Request.FormFile("image")
+	file, _, err := ctx.Request.FormFile("image")
 	if err != nil && err != http.ErrMissingFile {
 		responder.BadRequest("Failed to upload file", err.Error())
 		return
@@ -151,7 +151,14 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 
 	// Validasi file jika ada
 	if file != nil {
-		mimeType := header.Header.Get("Content-Type")
+		buf := make([]byte, 512)
+		if _, err := file.Read(buf); err != nil {
+			responder.BadRequest("Failed to read file", err.Error())
+			return
+		}
+		mimeType := http.DetectContentType(buf)
+
+		// mimeType := header.Header.Get("Content-Type")
 		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
 			responder.BadRequest("Upload failed - wrong file type", nil)
 			return
@@ -161,6 +168,12 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		if existingProduct.Image != "" {
 			publicID := pkg.GetPublicIDFromURL(existingProduct.Image)
 			_, err := h.cld.DeleteFile(ctx, publicID)
+			if err != nil {
+				responder.InternalServerError("Failed to delete old file", err.Error())
+				return
+			}
+
+			_, err = h.cld.DeleteFile(ctx, publicID)
 			if err != nil {
 				responder.InternalServerError("Failed to delete old file", err.Error())
 				return
