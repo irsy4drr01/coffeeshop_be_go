@@ -233,7 +233,7 @@ func TestPatchProductHandler(t *testing.T) {
 
 	existingProduct := models.Product{
 		ID:          1,
-		Uuid:        "uuid1",
+		Uuid:        "41838fc7-3bc9-4895-8be0-5623fff20f59",
 		ProductName: "Old Product",
 		Price:       20000,
 		Category:    "Old Category",
@@ -251,7 +251,7 @@ func TestPatchProductHandler(t *testing.T) {
 	updatedAt := "2024-09-19T19:44:33.876019Z"
 	productRepositoryMock.On("UpdateProduct", "uuid1", mock.Anything).Return(&models.Product{
 		ID:          1,
-		Uuid:        "uuid1",
+		Uuid:        "41838fc7-3bc9-4895-8be0-5623fff20f59",
 		ProductName: "Updated Product",
 		Price:       30000,
 		Category:    "Updated Category",
@@ -303,7 +303,7 @@ func TestPatchProductHandler(t *testing.T) {
 	actualData := actualResponse.Data.(map[string]interface{})
 
 	assert.Equal(t, float64(1), actualData["id"], "user id doesn't match")
-	assert.Equal(t, "uuid1", actualData["uuid"], "uuid doesn't match")
+	assert.Equal(t, "41838fc7-3bc9-4895-8be0-5623fff20f59", actualData["uuid"], "uuid doesn't match")
 	assert.Equal(t, "Updated Product", actualData["product_name"], "product name doesn't match")
 	assert.Equal(t, float64(30000), actualData["price"], "price doesn't match")
 	assert.Equal(t, "Updated Category", actualData["category"], "category doesn't match")
