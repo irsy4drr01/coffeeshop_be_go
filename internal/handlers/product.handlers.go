@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -132,15 +131,10 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Ambil JSON data dari form-data
-	jsonStr := ctx.Request.FormValue("data")
-	body := map[string]interface{}{}
-	if jsonStr != "" {
-		if err := json.Unmarshal([]byte(jsonStr), &body); err != nil {
-			responder.BadRequest("Failed to upload file", err.Error())
-			return
-		}
-	}
+	// Ambil dari form-data (bukan dalam format JSON)
+	productName := ctx.Request.FormValue("product_name")
+	price := ctx.Request.FormValue("price")
+	description := ctx.Request.FormValue("description")
 
 	// Ambil data produk dari database
 	existingProduct, err := h.repo.GetOneProduct(uuid)
@@ -195,37 +189,37 @@ func (h *ProductHandlers) PatchProductHandler(ctx *gin.Context) {
 		}
 
 		// Set URL gambar di body
-		body["image"] = uploadResult.SecureURL
-	}
-
-	// Jika gambar tidak diupdate, gunakan gambar lama
-	if _, exists := body["image"]; !exists || body["image"] == "" {
-		body["image"] = existingProduct.Image
+		existingProduct.Image = uploadResult.SecureURL
 	}
 
 	// Assign product attributes if they exist in the body
-	product := models.Product{}
-	if name, exists := body["product_name"].(string); exists && name != "" {
-		product.ProductName = name
+	if productName != "" {
+		existingProduct.ProductName = productName
 	}
-	if price, exists := body["price"].(int); exists && price != 0 {
-		product.Price = price
+	if price != "" {
+		existingProduct.Price, _ = strconv.Atoi(price)
 	}
-	if category, exists := body["category"].(string); exists && category != "" {
-		product.Category = category
-	}
-	if description, exists := body["description"].(string); exists && description != "" {
-		product.Description = &description
+	if description != "" {
+		existingProduct.Description = &description
+	} else if existingProduct.Description == nil {
+		defaultDescription := ""
+		existingProduct.Description = &defaultDescription
 	}
 
 	// Validasi Product
-	if _, err := govalidator.ValidateStruct(product); err != nil {
+	if _, err := govalidator.ValidateStruct(existingProduct); err != nil {
 		responder.BadRequest("Validation failed", err.Error())
 		return
 	}
 
 	// Update product di database
-	updatedProduct, err := h.repo.UpdateProduct(uuid, body)
+	updatedProduct, err := h.repo.UpdateProduct(uuid, map[string]interface{}{
+		"product_name": existingProduct.ProductName,
+		"price":        existingProduct.Price,
+		"description":  existingProduct.Description,
+		"image":        existingProduct.Image,
+	})
+
 	if err != nil {
 		responder.InternalServerError("Failed to update product", err.Error())
 		return
