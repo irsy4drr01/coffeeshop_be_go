@@ -1,20 +1,10 @@
 package models
 
-var schemaProducts = `CREATE TABLE public.product (
-	id serial4 NOT NULL,
-	product_name varchar(255) NOT NULL,
-	price int4 NOT NULL,
-	category varchar(255) NOT NULL,
-	description text NULL,
-	created_at timestamptz DEFAULT now() NULL,
-	updated_at timestamptz NULL,
-	"uuid" uuid DEFAULT gen_random_uuid() NULL,
-	is_deleted bool DEFAULT false NULL,
-	CONSTRAINT product_name_unique UNIQUE (product_name),
-	CONSTRAINT product_pk PRIMARY KEY (id)
-);`
+import (
+	"time"
 
-var _ = schemaProducts
+	"github.com/shopspring/decimal"
+)
 
 type Product struct {
 	ID          int     `db:"id" json:"id,omitempty" valid:"-"`
@@ -37,3 +27,95 @@ type DeleteProduct struct {
 }
 
 type Products []Product
+
+// -----------------------------------------------------
+type ProductDB struct {
+	ProductID    string          `db:"id"`
+	ProductName  string          `db:"product_name"`
+	CategoryID   int             `db:"category_id"`
+	Price        decimal.Decimal `db:"price"`
+	Description  string          `db:"description"`
+	TotalSold    int             `db:"total_sold"`
+	TotalLikes   int             `db:"total_likes"`
+	IsDeleted    bool            `db:"is_deleted"`
+	CreatedAt    time.Time       `db:"created_at"`
+	UpdatedAt    *time.Time      `db:"updated_at"`
+	CategoryName string          `db:"category_name"`
+	ProductImg   string          `db:"product_img"`
+	IsDiscount   bool            `db:"is_discount"`
+	DiscountRate decimal.Decimal `db:"discount_rate"`
+}
+
+type ProductResponse struct {
+	ID           string `json:"id"`
+	ProductName  string `json:"product_name"`
+	CategoryID   int    `json:"category_id"`
+	CategoryName string `json:"category_name"`
+	ProductImg   string `json:"product_img"` // hanya satu gambar utama
+	Description  string `json:"description"`
+	TotalSold    int    `json:"total_sold"`
+	TotalLike    int    `json:"total_like"`
+	Price        string `json:"price"`
+	FinalPrice   string `json:"final_price"`
+	IsDiscount   bool   `json:"is_discount"`
+	IsDeleted    bool   `json:"is_deleted"`
+}
+
+type ProductsResponse []ProductResponse
+
+type ProductQueryParams struct {
+	SearchProductName string                `form:"search_product_name"`
+	Category          []CategoryQueryParams `form:"category"`
+	Discount          bool                  `form:"discount"`
+	SortBy            string                `form:"sort_by"`
+	MinPrice          string                `form:"min_price"`
+	MaxPrice          string                `form:"max_price"`
+	Page              int                   `form:"page"`
+	Limit             int                   `form:"limit"`
+}
+
+type CategoryQueryParams struct {
+	Category1 string `form:"category1"`
+	Category2 string `form:"category2"`
+	Category3 string `form:"category3"`
+}
+
+// untuk SortBy
+// newest -> product terbaru
+// oldest -> product terlama
+// asc -> urutan nama product dari a - z
+// desc -> urutan nama product dari z - a
+// cheapst -> product termurah
+// cheapest -> product termahal
+// most_liked-> by likes
+
+type ProductDetailsResponse struct {
+	ProductID   string             `json:"product_id"`
+	ProductName string             `json:"product_name"`
+	ProductImgs ProductImgResponse `json:"product_imgs"`
+	Price       string             `json:"price"`
+	FinalPrice  string             `json:"final_price"`
+	TotalSold   int                `json:"total_sold"`
+	TotalLike   int                `json:"total_like"`
+	Description string             `json:"description"`
+	IsDiscount  bool               `json:"is_discount"`
+	DataSize    Sizes              `json:"data_size"`
+}
+
+type ProductImgResponse struct {
+	Img1 string `json:"img_1"`
+	Img2 string `json:"img_2"`
+	Img3 string `json:"img_3"`
+}
+
+type Size struct {
+	SizeID   int    `db:"size_id" json:"size_id"`
+	SizeName string `db:"name" json:"size_name"`
+}
+
+type Sizes []Size
+
+type ProductImgSlot struct {
+	SlotNumber int    `db:"slot_number"`
+	ImageFile  string `db:"image_file"`
+}

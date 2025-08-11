@@ -1,19 +1,6 @@
 package models
 
-var schemaUsers = `CREATE TABLE public.users (
-	id serial4 NOT NULL,
-	username varchar(255) NOT NULL,
-	email varchar(255) NOT NULL,
-	"password" varchar(255) NOT NULL,
-	created_at timestamptz DEFAULT now() NULL,
-	updated_at timestamptz NULL,
-	"uuid" uuid DEFAULT gen_random_uuid() NULL,
-	is_deleted bool DEFAULT false NULL,
-	CONSTRAINT unique_email UNIQUE (email),
-	CONSTRAINT users_pk PRIMARY KEY (id)
-);`
-
-var _ = schemaUsers
+import "time"
 
 type User struct {
 	Uuid      string  `db:"uuid" json:"uuid" valid:"uuid~Uuid must be a valid UUID format"`
@@ -28,3 +15,46 @@ type User struct {
 }
 
 type Users []User
+
+type UserDB struct {
+	ID         string     `db:"id"`
+	Email      string     `db:"email"`
+	Role       string     `db:"role"`
+	FullName   string     `db:"fullname"`
+	Phone      string     `db:"phone"`
+	Address    string     `db:"address"`
+	Image      string     `db:"image"`
+	IsVerified bool       `db:"is_verified"`
+	IsDeleted  bool       `db:"is_deleted"`
+	CreatedAt  time.Time  `db:"created_at"`
+	UpdatedAt  *time.Time `db:"updated_at"`
+}
+
+type UserProfileResponse struct {
+	FullName   string `json:"fullname"`
+	ProfileImg string `json:"profile_img"`
+	Email      string `json:"email"`
+	Phone      string `json:"phone"`
+	Address    string `json:"address"`
+	CreatedAt  string `json:"created_at"`
+}
+
+type UserProfileUpdateDB struct {
+	Fullname   string `db:"fullname"`
+	ProfileImg string `db:"profile_img"`
+	Email      string `db:"email"`
+	Phone      string `db:"phone"`
+	Address    string `db:"address"`
+}
+
+type UserProfileUpdateReq struct {
+	Fullname   string `form:"fullname"`
+	ProfileImg string `form:"profile_img"`
+	Email      string `form:"email"`
+	Phone      string `form:"phone"`
+	Address    string `form:"address"`
+}
+
+type UserPasswordUpdateReq struct {
+	Password string `json:"password"`
+}
