@@ -8,7 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func favorite(g *gin.Engine, db *sqlx.DB) {
+func favorite(g *gin.RouterGroup, db *sqlx.DB) {
 	route := g.Group("/favorite")
 
 	repo := repositories.NewFavorite(db)

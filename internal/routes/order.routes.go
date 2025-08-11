@@ -9,13 +9,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func auth(g *gin.RouterGroup, db *sqlx.DB) {
-	route := g.Group("/auth")
+func order(g *gin.RouterGroup, db *sqlx.DB) {
+	route := g.Group("/order")
 
-	repo := repositories.NewAuth(db)
-	service := services.NewAuthService(repo)
-	handler := handlers.NewAuth(service)
+	repo := repositories.NewOrder(db)
+	service := services.NewOrderService(repo)
 
-	route.POST("/register", middleware.CORSMiddleware(), handler.RegisterHandler)
-	route.POST("/login", middleware.CORSMiddleware(), handler.LoginHandler)
+	handler := handlers.NewOrder(service)
+
+	route.POST("/", middleware.AuthAndRoleMiddleware("user"), handler.AddOrderHandler)
 }
