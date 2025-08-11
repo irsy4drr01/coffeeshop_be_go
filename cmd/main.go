@@ -2,44 +2,28 @@ package main
 
 import (
 	"log"
-	"time"
+	"net/http"
 
-	"github.com/gin-contrib/cors"
+	middleware "github.com/irsy4drr01/coffeeshop_be_go/internal/middlewares"
 	"github.com/irsy4drr01/coffeeshop_be_go/internal/routes"
 	"github.com/irsy4drr01/coffeeshop_be_go/pkg"
 	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	db, err := pkg.Posql()
-	if err != nil {
-		log.Fatal(err)
-	}
+	db := pkg.Posql()
 
 	router := routes.New(db)
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},                            // domain yang diperbolehkan
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"}, // method yang diperbolehkan
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour, // durasi cache hasil preflight request
-	}))
 
-	// router.Use(cors.Default())
-	// Default CORS if use cors.Default()
-	// router.Use(cors.New(cors.Config{
-	// 	AllowOrigins:     []string{"*"},
-	// 	AllowMethods:     []string{"GET", "POST"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
-	// 	ExposeHeaders:    nil,
-	// 	AllowCredentials: false,
-	// 	MaxAge: 0,
-	// }))
+	router.Static("/public", "./public")
+
+	router.Use(middleware.CORSMiddleware())
 
 	server := pkg.Server(router)
 
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal(err)
+	log.Printf("Server is running at http://%s\n", server.Addr)
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Server failed: %v\n", err)
 	}
 }
