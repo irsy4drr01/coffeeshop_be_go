@@ -9,10 +9,17 @@ import (
 )
 
 func Server(router *gin.Engine) *http.Server {
-	var address string = "0.0.0.0:8000"
-	if port := os.Getenv("PORT"); port != "" {
-		address = ":" + port
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "0.0.0.0"
 	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
+
+	address := host + ":" + port
 
 	server := &http.Server{
 		Addr:         address,
@@ -21,5 +28,6 @@ func Server(router *gin.Engine) *http.Server {
 		IdleTimeout:  time.Second * 15,
 		Handler:      router,
 	}
+
 	return server
 }

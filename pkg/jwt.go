@@ -8,17 +8,19 @@ import (
 )
 
 type claims struct {
-	Uuid  string `json:"uuid"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	Uuid       string `json:"user_id"`
+	Email      string `json:"email"`
+	Role       string `json:"role"`
+	IsVerified bool   `json:"is_verify"`
 	jwt.RegisteredClaims
 }
 
-func NewJWT(uuid, email, role string) *claims {
+func NewJWT(uuid, email, role string, isVerified bool) *claims {
 	return &claims{
-		Uuid:  uuid,
-		Email: email,
-		Role:  role,
+		Uuid:       uuid,
+		Email:      email,
+		Role:       role,
+		IsVerified: isVerified,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "coffee shop",
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 60)),

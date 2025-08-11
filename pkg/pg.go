@@ -1,20 +1,20 @@
 package pkg
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
-func Posql() (*sqlx.DB, error) {
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASS")
-	dbName := os.Getenv("DB_NAME")
+func Posql() *sqlx.DB {
+	dbURL := os.Getenv("DB_URL")
+	db, err := sqlx.Connect("postgres", dbURL)
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
 
-	config := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", host, user, password, dbName)
-
-	return sqlx.Connect("postgres", config)
+	log.Println("Database connected successfully")
+	return db
 }
