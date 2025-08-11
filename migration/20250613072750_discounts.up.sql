@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS public.discounts (
+  id serial PRIMARY KEY NOT NULL,
+  name VARCHAR UNIQUE NOT NULL,
+  discount FLOAT NOT NULL,
+  expired TIMESTAMPTZ NOT NULL,
+  is_actived BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  updated_at TIMESTAMPTZ
+);

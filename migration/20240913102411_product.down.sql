@@ -1,1 +1,0 @@
-TABLE IF EXISTS public.product CASCADE;
